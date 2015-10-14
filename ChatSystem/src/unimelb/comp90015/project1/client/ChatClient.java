@@ -1,7 +1,7 @@
 package unimelb.comp90015.project1.client;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
@@ -13,21 +13,47 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 import unimelb.comp90015.project1.server.ChatRoom;
 
+/**
+ * @author kliu2 
+ * the main entrance for client, always to receive input from
+ * server and print formated json string on standard output 
+ */
 public class ChatClient {
 	private static boolean isQuit;
 	private static boolean isFirstTime;
 	private static Client client;
 
-	public static void main(String[] args) {
+	private static Thread senderThread;
+	private static ClientSender sender;
+
+	private static CmdOptions cmdOptions;
+
+	public static void main(String[] args) throws IOException {
 		Socket socket = null;
 		isQuit = false;
 		isFirstTime = true;
 		try {
+			// parser the parameters from the command line
+			cmdOptions = new CmdOptions();
+			CmdLineParser parser = new CmdLineParser(cmdOptions);
+			try {
+				parser.parseArgument(args);
+			} catch (CmdLineException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 			// connect to a server listening on port 4444 on localhost
-			socket = new Socket("localhost", 4444);
+			socket = new Socket(cmdOptions.hostname, cmdOptions.port);
+			// // connect to a server listening on port 4444 on localhost
+			// socket = new Socket("localhost", 4444);
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), StandardCharsets.UTF_8));
 			// Reading from console
@@ -46,9 +72,9 @@ public class ChatClient {
 					}
 				}
 			}
-			in.close();
-			socket.close();
-			cmdin.close();
+		} catch (EOFException e) {
+			// sent a quit command to server if exception occurs
+			sender.constructJSON("quit", null);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -56,6 +82,18 @@ public class ChatClient {
 		}
 	}
 
+	/**
+	 * decode the response from server and show structured messages in standard
+	 * outstream
+	 * 
+	 * @param socket
+	 * @param cmdin
+	 *            command input
+	 * @param response
+	 *            JSON message from server
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
 	@SuppressWarnings("null")
 	private static void decodeResponse(Socket socket, Scanner cmdin,
 			String response) throws InterruptedException, IOException {
@@ -70,18 +108,22 @@ public class ChatClient {
 			switch (type) {
 			case "newidentity":
 				// create a thread to send the messages to server
+				// create a local client variable to store current status
 				if (isFirstTime) {
 					isFirstTime = false;
 					client = new Client(object.get("identity").toString());
 					ChatRoom room = new ChatRoom();
 					room.setRoomId("mainhall");
 					client.setCurrentRoom(room);
-					Thread sender = new Thread(new ClientSender(socket, cmdin,
-							client));
-					msg = String.format("Connected to %s as %s.", "localhost",
-							object.get("identity").toString());
+
+					sender = new ClientSender(socket, cmdin, client);
+					senderThread = new Thread(sender);
+					msg = String.format("Connected to %s as %s.",
+							cmdOptions.hostname, object.get("identity")
+									.toString());
 					System.out.println(msg);
-					sender.start();
+
+					senderThread.start();
 				} else {
 					String newId = object.get("identity").toString();
 					String oldId = object.get("former").toString();
@@ -96,7 +138,11 @@ public class ChatClient {
 				String identity = object.get("identity").toString();
 				String former = object.get("former").toString();
 				String newRoom = object.get("roomid").toString();
-				client.getCurrentRoom().setRoomId(newRoom);
+
+				if (client.getClientName().equals(identity)) {
+					client.getCurrentRoom().setRoomId(newRoom);
+				}
+
 				if (!former.equals("")) {
 					msg = String.format("%s moves from %s to %s", identity,
 							former, newRoom);
@@ -127,20 +173,17 @@ public class ChatClient {
 				msg = String.format("%s: %s", id, content);
 				System.out.println(msg);
 				break;
-			case "error":
-				String errorContent = object.get("content").toString();
-				System.err.println(errorContent);
-				break;
-			case "success":
-				String successContent = object.get("content").toString();
-				System.out.println(successContent);
-				break;
 			case "quit":
-				System.err.println(object.get("identity").toString()
-						+ " has quited");
-				isQuit = true;
-				socket.close();
-				System.exit(0);
+				String ID = object.get("identity").toString();
+				System.err.println(ID + " has quited");
+				if (client.getClientName().equals(ID)) {
+					isQuit = true;
+
+					cmdin.close();
+					socket.close();
+					// thread interrupt
+					senderThread.interrupt();
+				}
 				break;
 			}
 		} catch (ParseException e) {
@@ -149,5 +192,17 @@ public class ChatClient {
 		System.out.print(String.format("[%s] %s >", client.getCurrentRoom()
 				.getRoomId(), client.getClientName()));
 		return;
+	}
+
+	/**
+	 * @author kliu2
+	 *
+	 *         Command options -h hostname -p port number
+	 */
+	public static class CmdOptions {
+		@Argument(index=0, usage = "Give hostname", required = true)
+		private String hostname;
+		@Option(name = "-p", usage = "Give port num", required = false)
+		private int port = 4444;
 	}
 }

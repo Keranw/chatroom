@@ -13,12 +13,24 @@ import java.util.regex.Pattern;
 
 import org.json.simple.JSONObject;
 
+/**
+ * @author kliu2 
+ * A Sender Thread to send command to server should parse the command
+ * from command line to JSON Strings
+ *
+ */
 public class ClientSender implements Runnable {
 	private Socket socket;
 	private Client client;
 	private Scanner cmdin;
-	private OutputStreamWriter out;
+	private static OutputStreamWriter out;
 
+	/**
+	 * Constructor
+	 * @param socket
+	 * @param cmdin
+	 * @param client
+	 */
 	public ClientSender(Socket socket, Scanner cmdin, Client client) {
 		this.socket = socket;
 		this.client = client;
@@ -29,19 +41,15 @@ public class ClientSender implements Runnable {
 	public void run() {
 		try {
 			// Preparing sending streams
-			OutputStreamWriter out = new OutputStreamWriter(
-					socket.getOutputStream(), StandardCharsets.UTF_8);
+			out = new OutputStreamWriter(socket.getOutputStream(),
+					StandardCharsets.UTF_8);
 			while (!socket.isClosed()) {
 				String msg = cmdin.nextLine();
 				// forcing TCP to send data immediately
 
 				if (msg != null || msg != "") {
-					String json = encodeRequest(msg);
-					System.out.println(json);
-					if(!json.equals("{}")) {
-						out.write((json + "\n"));
-						out.flush();
-					}
+					// parse command into json and send it to server
+					parseCommand(msg);
 				}
 			}
 		} catch (IOException e) {
@@ -49,14 +57,13 @@ public class ClientSender implements Runnable {
 		}
 	}
 
-	private static String encodeRequest(String request) {
-		JSONObject requestObj = parseCommand(request);
-
-		return requestObj.toJSONString();
-	}
-
+	/**
+	 * Using regular expression to extract command and arguments
+	 * @param command
+	 * @throws IOException
+	 */
 	@SuppressWarnings("unchecked")
-	private static JSONObject parseCommand(String command) {
+	private static void parseCommand(String command) throws IOException {
 		String cmdPattern = "^#\\w+ ?";
 		String argumentPattern = " [\\w\\W]+";
 		String msgPattern = "^\\w[\\w\\W ]*";
@@ -68,32 +75,40 @@ public class ClientSender implements Runnable {
 		Matcher argMatcher = arg.matcher(command);
 		Matcher msgMatcher = msg.matcher(command);
 
-		JSONObject requestObj = new JSONObject();
+		ArrayList<String> args = new ArrayList<String>();
 
 		if (cmdMatcher.find()) {
 			String type = cmdMatcher.group(0).toString();
-			requestObj.put("type", type.trim());
-			ArrayList<String> args = new ArrayList<String>();
+
 			while (argMatcher.find()) {
 				args.add(argMatcher.group(0).toString().trim());
 			}
-			return constructJSON(requestObj, type.trim().split("#")[1], args);
+			constructJSON(type.trim().split("#")[1], args);
 		}
 
+		args.clear();
 		if (msgMatcher.find()) {
 			String message = msgMatcher.group(0).toString();
-			requestObj.put("type", "message");
-			requestObj.put("content", message);
+			args.add(message);
+			constructJSON("message", args);
 		}
-		return requestObj;
 	}
 
+	/**
+	 * construct json string
+	 * @param type
+	 * @param args
+	 * @throws IOException
+	 */
 	@SuppressWarnings("unchecked")
-	private static JSONObject constructJSON(JSONObject obj, String type,
-			ArrayList<String> args) {
-		JSONObject requestObj = obj;
+	public static void constructJSON(String type, ArrayList<String> args)
+			throws IOException {
+		JSONObject requestObj = new JSONObject();
 		requestObj.put("type", type);
 		switch (type) {
+		case "message":
+			requestObj.put("content", args.get(0));
+			break;
 		case "identitychange":
 			requestObj.put("identity", args.get(0));
 			break;
@@ -119,6 +134,9 @@ public class ClientSender implements Runnable {
 		case "quit":
 			break;
 		}
-		return requestObj;
+		
+		// send jsonstring to server 
+		out.write((requestObj.toJSONString() + "\n"));
+		out.flush();
 	}
 }

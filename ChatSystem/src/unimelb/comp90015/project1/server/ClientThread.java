@@ -9,97 +9,68 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 
-public class ClientThread implements Runnable {
+/**
+ * @author kliu2
+ * The Client Model stored in server
+ */
+public class ClientThread {
 	private Socket socket;
 
 	// Client Info
-	private String clientId;
+//	private String clientId;
 	private String clientName;
 	private ChatRoom currentRoom;
 	private ArrayList<ChatRoom> ownerRooms;
 
-	private boolean isFirstLog;
 	private static MainHall mainHall;
 	private ClientThreadHandler handler;
-	private BufferedReader in;
-	private OutputStreamWriter out;
+	private static Thread handlerThread;
+	
+//	private OutputStreamWriter out;
 
+	/**
+	 * Constructor
+	 * start a thread to listen this client, receiving and sending messages
+	 * @param socket
+	 * @param id
+	 * @param _mainHall
+	 */
 	public ClientThread(Socket socket, String id, MainHall _mainHall) {
 		this.socket = socket;
 
-		clientId = id;
+//		clientId = id;
 		clientName = id;
 		currentRoom = new ChatRoom();
 		ownerRooms = new ArrayList<ChatRoom>();
 
-		this.isFirstLog = true;
 		mainHall = _mainHall;
-
-		try {
-			this.in = new BufferedReader(new InputStreamReader(
-					socket.getInputStream(), "UTF-8"));
-			this.out = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		this.handler = new ClientThreadHandler(socket, this, this.mainHall,
-				this.out);
+		
+		this.handler = new ClientThreadHandler(socket, this, this.mainHall);
+		handlerThread = new Thread(this.handler);
+		handlerThread.setDaemon(true);
+		handlerThread.start();
 	}
 
-	@Override
-	public void run() {
-		try {
-			try {
-				while (!socket.isClosed()) {
-					if (this.isFirstLog) {
-						this.isFirstLog = false;
-						System.out.println("ClientThread.run()" + clientId);
-						handler.sendFirstId();
-					}
-					String msg = in.readLine();
-					System.out.println("receive message from " + clientId
-							+ ": " + msg);
-
-					String type = handler.decodeRequestJSON(msg);
-
-					if (type == null || type.equals("quit")) {
-						break;
-					}
-				}
-			} catch (EOFException e) {
-				closeSocket();
-			} catch (SocketException s) {
-				closeSocket();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			closeSocket();
-		}
-
-		// A thread finishes if run method finishes
+	// stop this thread
+	public static void interruptThread() {
+		handlerThread.interrupt();
 	}
-
-	private void closeSocket() {
-		try {
-			if (socket != null) {
-
-				socket.close();
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println("Client disconnected.");
-	}
-
-	public String getClientId() {
-		return clientId;
-	}
-
-	public void setClientId(String clientName) {
-		clientId = clientName;
-	}
+	
+	
+	
+//	public String getClientId() {
+//		return clientId;
+//	}
+//
+//	public void setClientId(String clientName) {
+//		clientId = clientName;
+//	}
+	
+///////////////////////////
+///     				 //
+/// Getters and Setters  //
+///						 //	
+///////////////////////////
 
 	public ChatRoom getCurrentRoom() {
 		return currentRoom;
