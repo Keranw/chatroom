@@ -6,11 +6,13 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.*;
 
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLServerSocketFactory;
+
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import unimelb.comp90015.project1.client.ChatClient.CmdOptions;
 import unimelb.comp90015.project1.server.ClientThread;
 
 /**
@@ -27,7 +29,6 @@ public class ChatServer {
 	private static Integer initialId = 1;
 
 	public static void main(String[] args) throws IOException {
-		ServerSocket serverSocket = null;
 		try {
 			initialise();
 			// parser the parameters from the command line
@@ -39,30 +40,40 @@ public class ChatServer {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
+			
+			String rootDir = System.getProperty("user.dir");
+			System.out.println(rootDir);
+			System.setProperty("javax.net.ssl.keyStore", rootDir + "/mySrvKeystore");
+			System.setProperty("javax.net.ssl.keyStorePassword","123456");
+			
+			// Create SSL server socket factory, which creates SSLServerSocket instances
+			ServerSocketFactory factory = SSLServerSocketFactory.getDefault();
+			
 			// Server is listening on port 4444
-			serverSocket = new ServerSocket(serverOptions.port);
-			System.out.println("Server is listening...");
+			try(ServerSocket serverSocket = factory.createServerSocket(serverOptions.port)) {
+				System.out.println("Server is listening...");
 
-			// To store the all used Id and reUsed Ids
-			allUsedIds = new HashMap<String, Integer>();
-			identitiesHash = new HashMap<String, String>();
-			unUsedIds = new LinkedList<String>();
-			threadsList = new ArrayList<ClientThread>();
-			while (true) {
-				// Server waits for a new connection
-				Socket socket = serverSocket.accept();
+				// To store the all used Id and reUsed Ids
+				allUsedIds = new HashMap<String, Integer>();
+				identitiesHash = new HashMap<String, String>();
+				unUsedIds = new LinkedList<String>();
+				threadsList = new ArrayList<ClientThread>();
+				while (true) {
+					// Server waits for a new connection
+					Socket socket = serverSocket.accept();
 
-				// A new thread is created per client
-				try {
-					createNewClient(socket);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					// A new thread is created per client
+					try {
+						createNewClient(socket);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 
 		} catch (SocketException e) {
 
-			// e.printStackTrace();
+			 e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {

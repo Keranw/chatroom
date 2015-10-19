@@ -9,6 +9,9 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -49,11 +52,17 @@ public class ChatClient {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-
+			
+			String rootDir = System.getProperty("user.dir");
+			System.setProperty("javax.net.ssl.trustStore", rootDir + "/mySrvKeystore");
+			System.setProperty("javax.net.ssl.trustStorePassword","123456");
+			
+			// Create SSL socket factory, which creates SSLSocket instances
+			SocketFactory factory= SSLSocketFactory.getDefault();
+			
 			// connect to a server listening on port 4444 on localhost
-			socket = new Socket(cmdOptions.hostname, cmdOptions.port);
-			// // connect to a server listening on port 4444 on localhost
-			// socket = new Socket("localhost", 4444);
+			socket = factory.createSocket(cmdOptions.hostname, cmdOptions.port);
+			
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), StandardCharsets.UTF_8));
 			// Reading from console
