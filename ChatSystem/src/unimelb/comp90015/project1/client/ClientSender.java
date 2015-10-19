@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.simple.JSONObject;
+import org.apache.commons.codec.digest.DigestUtils;
 
 /**
  * @author kliu2 
@@ -64,34 +65,28 @@ public class ClientSender implements Runnable {
 	 */
 	@SuppressWarnings("unchecked")
 	private static void parseCommand(String command) throws IOException {
-		String cmdPattern = "^#\\w+ ?";
-		String argumentPattern = " [\\w\\W]+";
-		String msgPattern = "^\\w[\\w\\W ]*";
-
-		Pattern cmd = Pattern.compile(cmdPattern);
-		Pattern arg = Pattern.compile(argumentPattern);
-		Pattern msg = Pattern.compile(msgPattern);
-		Matcher cmdMatcher = cmd.matcher(command);
-		Matcher argMatcher = arg.matcher(command);
-		Matcher msgMatcher = msg.matcher(command);
-
-		ArrayList<String> args = new ArrayList<String>();
-
-		if (cmdMatcher.find()) {
-			String type = cmdMatcher.group(0).toString();
-
-			while (argMatcher.find()) {
-				args.add(argMatcher.group(0).toString().trim());
-			}
-			constructJSON(type.trim().split("#")[1], args);
+		String type = null;
+		if(command.matches("^#[\\w\\W]+")) {
+			String[] params = command.trim().split("\\s+");
+			
+			type = params[0].split("#")[1];
+			constructJSON(type, params);
+		} else {
+			type = "message";
+			String[] param = new String[1];
+			param[0] = command;
+			constructJSON(type, param);
 		}
-
-		args.clear();
-		if (msgMatcher.find()) {
-			String message = msgMatcher.group(0).toString();
-			args.add(message);
-			constructJSON("message", args);
-		}
+	}
+	
+	/**
+	 * Using SHA1 to generate a hash of password
+	 * to authenticate the identity in server
+	 * @param password
+	 * @return a hash of password
+	 */
+	private static String encyptPassword(String password) {
+		return DigestUtils.sha1Hex(password);
 	}
 
 	/**
@@ -101,35 +96,48 @@ public class ClientSender implements Runnable {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	public static void constructJSON(String type, ArrayList<String> args)
+	public static void constructJSON(String type, String[] args)
 			throws IOException {
 		JSONObject requestObj = new JSONObject();
 		requestObj.put("type", type);
 		switch (type) {
 		case "message":
-			requestObj.put("content", args.get(0));
+			requestObj.put("content", args[0]);
+			break;
+		case "register":
+			// send a plain text of password when guest register
+			requestObj.put("identity", args[1]);
+			requestObj.put("password", args[2]);
+			break;
+		case "login":
+			// hash the password
+			String passwordHash = encyptPassword(args[2]);
+			// send password hash to server and server would verify the string
+			// after guest has registered
+			requestObj.put("identity", args[1]);
+			requestObj.put("password", passwordHash);
 			break;
 		case "identitychange":
-			requestObj.put("identity", args.get(0));
+			requestObj.put("identity", args[1]);
 			break;
 		case "join":
-			requestObj.put("roomid", args.get(0));
+			requestObj.put("roomid", args[1]);
 			break;
 		case "who":
-			requestObj.put("roomid", args.get(0));
+			requestObj.put("roomid", args[1]);
 			break;
 		case "list":
 			break;
 		case "createroom":
-			requestObj.put("roomid", args.get(0));
+			requestObj.put("roomid", args[1]);
 			break;
 		case "kick":
-			requestObj.put("identity", args.get(0));
-			requestObj.put("roomid", args.get(1));
-			requestObj.put("time", args.get(2));
+			requestObj.put("identity", args[1]);
+			requestObj.put("roomid", args[2]);
+			requestObj.put("time", args[3]);
 			break;
 		case "delete":
-			requestObj.put("roomid", args.get(0));
+			requestObj.put("roomid", args[1]);
 			break;
 		case "quit":
 			break;
