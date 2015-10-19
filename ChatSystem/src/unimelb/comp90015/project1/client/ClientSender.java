@@ -107,15 +107,13 @@ public class ClientSender implements Runnable {
 		case "register":
 			// send a plain text of password when guest register
 			requestObj.put("identity", args[1]);
-			requestObj.put("password", args[2]);
+			requestObj.put("password", encyptPassword(args[2]));
 			break;
 		case "login":
-			// hash the password
-			String passwordHash = encyptPassword(args[2]);
 			// send password hash to server and server would verify the string
 			// after guest has registered
 			requestObj.put("identity", args[1]);
-			requestObj.put("password", passwordHash);
+			requestObj.put("password", encyptPassword(args[2]));
 			break;
 		case "identitychange":
 			requestObj.put("identity", args[1]);

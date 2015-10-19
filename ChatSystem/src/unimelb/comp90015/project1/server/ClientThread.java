@@ -26,12 +26,9 @@ public class ClientThread {
 	private Socket socket;
 
 	// Client Info
-//	private String clientId;
-	private String clientName;
-	private ChatRoom currentRoom;
-	private ArrayList<ChatRoom> ownerRooms;
+	private ClientInfo clientInfo;
+
 	private HashMap<String, String> identitiesHash;
-	private ArrayList<String> formerId;
 
 	private static MainHall mainHall;
 	private ClientThreadHandler handler;
@@ -49,11 +46,8 @@ public class ClientThread {
 	public ClientThread(Socket socket, String id, MainHall _mainHall, HashMap<String, String> identitiesHash) {
 		this.socket = socket;
 
-//		clientId = id;
-		clientName = id;
-		currentRoom = new ChatRoom();
-		ownerRooms = new ArrayList<ChatRoom>();
-		formerId = new ArrayList<String>();
+		clientInfo = new ClientInfo();
+		clientInfo.setClientName(id);
 
 		mainHall = _mainHall;
 		
@@ -82,25 +76,12 @@ public class ClientThread {
 	/// Getters and Setters  //
 	///						 //	
 	///////////////////////////
-
-	public ChatRoom getCurrentRoom() {
-		return currentRoom;
+	public ClientInfo getClientInfo() {
+		return clientInfo;
 	}
 
-	public void setCurrentRoom(ChatRoom _currentRoom) {
-		currentRoom = _currentRoom;
-	}
-
-	public ArrayList<ChatRoom> getOwnerRooms() {
-		return ownerRooms;
-	}
-
-	public void setOwnerRooms(ArrayList<ChatRoom> _ownerRooms) {
-		ownerRooms = _ownerRooms;
-	}
-
-	public void addRoom(ChatRoom room) {
-		ownerRooms.add(room);
+	public void setClientInfo(ClientInfo clientInfo) {
+		this.clientInfo = clientInfo;
 	}
 
 	public ClientThreadHandler getHandler() {
@@ -118,16 +99,6 @@ public class ClientThread {
 	public void setSocket(Socket socket) {
 		this.socket = socket;
 	}
-
-	public String getClientName() {
-		return clientName;
-	}
-
-	public void setClientName(String _clientName) {
-		clientName = _clientName;
-		// store the thread in identitiesHash
-//		this.identitiesHash.put("thread", this);
-	}
 	
 	///////////////////////////
 	///     				 //
@@ -141,7 +112,7 @@ public class ClientThread {
 		try {
 			String outMsg = null;
 			System.out.println("first run");
-			outMsg = this.generateNewIdentity("", this.getClientName());
+			outMsg = this.generateNewIdentity("", clientInfo.getClientName());
 			outFlush(outputStream, outMsg);
 			// server join client to mainhall
 			joinRoom("mainhall");
@@ -183,6 +154,49 @@ public class ClientThread {
 		// response New Identity Message
 		generateNewId(obj, identity);
 	}
+	
+	/**
+	 * store identity: password in a hash map
+	 * @param identity
+	 * @param password
+	 * @throws IOException
+	 */
+	public void storeIdentity(String identity, String password) throws IOException {
+		changeId(identity);
+		this.identitiesHash.put(identity, password);
+	}
+	
+	
+	/**
+	 * Match the password record with the hash received from client to verify the identity
+	 * change the name after passing the verification
+	 * return system error message to client if password is invalid
+	 * @param identity
+	 * @param password
+	 * @throws IOException
+	 */
+	public void verifyIdentity(String identity, String password) throws IOException {
+		String passwordInServer = identitiesHash.get(identity).toString();
+		if (passwordInServer.equals(password)) {
+			changeId(identity);
+		} else {
+			// TODO password is invalid, return error msg
+			generateSystemMsg("password is invalid");
+		}
+	}
+	
+	/**
+	 * check the identity is authenticated or not
+	 * @param identity
+	 * @return true if the identity is authenticated
+	 * @return false if not
+	 */
+	private boolean checkAuthenticated(String identity) {
+		if (this.identitiesHash.get(identity) != null) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * @param obj
@@ -196,17 +210,17 @@ public class ClientThread {
 		// this.formerNames.add(this.client.getClientName());
 		if (checkValidId(identity)) {
 			// update the ownership
-			if (this.getOwnerRooms().size() > 0) {
-				for (ChatRoom room : this.getOwnerRooms()) {
+			if (clientInfo.getOwnerRooms().size() > 0) {
+				for (ChatRoom room : clientInfo.getOwnerRooms()) {
 					room.setOwnerId(identity);
 				}
 			}
 			obj.put("type", "newidentity");
-			obj.put("former", this.getClientName());
+			obj.put("former", clientInfo.getClientName());
 			obj.put("identity", identity);
 			// add clientId to reused id
-			this.formerId.add(this.getClientName());
-			this.setClientName(identity);
+			clientInfo.getFormerId().add(clientInfo.getClientName());
+			clientInfo.setClientName(identity);
 			// broad change information to all clients online
 			for (ClientThread clientThread : this.mainHall.getAllClients()) {
 				OutputStreamWriter clientOut = clientThread.getOutputStream();
@@ -239,11 +253,10 @@ public class ClientThread {
 		}
 		
 		for (ClientThread client : this.mainHall.getAllClients()) {
-			if (identity.equals(client.getClientName())
-					|| identity.equals(client.getClientName())) {
+			if (identity.equals(client.getClientInfo().getClientName())) {
 				// response invalid identity
 				generateSystemMsg(String.format("%s is now %s",
-						client.getClientName(), identity));
+						client.getClientInfo().getClientName(), identity));
 				return false;
 			}
 		}
@@ -256,39 +269,39 @@ public class ClientThread {
 	 * @throws IOException
 	 */
 	public void joinRoom(String roomId) throws IOException {
-		ChatRoom currentRoom = this.getCurrentRoom();
+		ChatRoom currentRoom = clientInfo.getCurrentRoom();
 		ChatRoom requestedRoom = this.mainHall.getRoomById(roomId);
 		if (requestedRoom == null) {
 			// generate roomchange msg to individual
 			if (currentRoom != null) {
 				generateRoomChangeMsg(currentRoom.getRoomName(),
 						currentRoom.getRoomName(),
-						this.getClientName(), outputStream);
+						clientInfo.getClientName(), outputStream);
 			} else {
-				generateRoomChangeMsg("", "", this.getClientName(),
+				generateRoomChangeMsg("", "", clientInfo.getClientName(),
 						outputStream);
 			}
 			generateSystemMsg("roomId is invalid or non existent");
 		} else if (currentRoom.getRoomName() == null) {
 			if (forbidClientToConnect(requestedRoom) > 0) {
 				requestedRoom.getClients().add(this);
-				this.setCurrentRoom(requestedRoom);
+				clientInfo.setCurrentRoom(requestedRoom);
 				broadcastToClients(requestedRoom, "",
 						requestedRoom.getRoomName(),
-						this.getClientName());
+						clientInfo.getClientName());
 			}
 		} else {
 			if (forbidClientToConnect(requestedRoom) > 0) {
 				currentRoom.removeClient(this);
 				removeRoomFromMainhall(currentRoom);
 				requestedRoom.addClient(this);
-				this.setCurrentRoom(requestedRoom);
+				clientInfo.setCurrentRoom(requestedRoom);
 				broadcastToClients(currentRoom, currentRoom.getRoomName(),
 						requestedRoom.getRoomName(),
-						this.getClientName());
+						clientInfo.getClientName());
 				broadcastToClients(requestedRoom, currentRoom.getRoomName(),
 						requestedRoom.getRoomName(),
-						this.getClientName());
+						clientInfo.getClientName());
 			}
 		}
 
@@ -305,7 +318,7 @@ public class ClientThread {
 	 */
 	private int forbidClientToConnect(ChatRoom room) {
 		HashMap<String, String> kickedUser = room.getKickedClients();
-		String futureTime = kickedUser.get(this.getClientName());
+		String futureTime = kickedUser.get(clientInfo.getClientName());
 		if (futureTime != null) {
 			Long time = Long.parseLong(futureTime);
 			Long currentTime = System.currentTimeMillis();
@@ -342,8 +355,8 @@ public class ClientThread {
 		ChatRoom requestedRoom = this.mainHall.getRoomById(roomId);
 		if (requestedRoom == null) {
 			ChatRoom newRoom = new ChatRoom(roomId);
-			newRoom.setOwnerId(this.getClientName());
-			this.addRoom(newRoom);
+			newRoom.setOwnerId(clientInfo.getClientName());
+			clientInfo.addRoom(newRoom);
 			this.mainHall.addRoom(newRoom);
 			generateRoomListMsg();
 			generateSystemMsg(String.format("%s created", roomId));
@@ -402,8 +415,8 @@ public class ClientThread {
 		JSONObject obj = new JSONObject();
 		JSONArray clients = new JSONArray();
 		for (ClientThread client : room.getClients()) {
-			String clientName = client.getClientName();
-			if (client.getClientName().equals(room.getOwnerId())) {
+			String clientName = client.getClientInfo().getClientName();
+			if (clientName.equals(room.getOwnerId())) {
 				clientName = clientName + "*";
 			}
 			clients.add(clientName);
@@ -477,7 +490,7 @@ public class ClientThread {
 		for (ClientThread client : room.getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
 			client.generateRoomChangeMsg(former, current,
-					client.getClientName(), broadOut);
+					client.getClientInfo().getClientName(), broadOut);
 		}
 	}
 
@@ -488,14 +501,14 @@ public class ClientThread {
 	 */
 	@SuppressWarnings("unchecked")
 	public void broadMessage(String message) throws IOException {
-		if (this.getCurrentRoom().getClients() == null) {
+		if (clientInfo.getCurrentRoom().getClients() == null) {
 			return;
 		}
 		JSONObject obj = new JSONObject();
 		obj.put("type", "message");
 		obj.put("content", message);
-		obj.put("identity", this.getClientName());
-		for (ClientThread client : this.getCurrentRoom().getClients()) {
+		obj.put("identity", clientInfo.getClientName());
+		for (ClientThread client : clientInfo.getCurrentRoom().getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
 			outFlush(broadOut, obj.toJSONString());
 		}
@@ -525,18 +538,18 @@ public class ClientThread {
 	@SuppressWarnings("static-access")
 	public void deleteRoom(String roomId) throws IOException {
 		ChatRoom room = this.mainHall.getRoomById(roomId);
-		ArrayList<ChatRoom> rooms = this.getOwnerRooms();
+		ArrayList<ChatRoom> rooms = clientInfo.getOwnerRooms();
 		if (room != null && rooms.size() > 0
-				&& this.getOwnerRooms().contains(room)) {
+				&& clientInfo.getOwnerRooms().contains(room)) {
 			// broadcast msgs to mainhall
 			broadcastToMainHall(room, roomId, "mainhall");
 			// all clients are moved to mainhall
 			for (ClientThread client : room.getClients()) {
-				client.setCurrentRoom(mainHall);
+				client.getClientInfo().setCurrentRoom(mainHall);
 				this.mainHall.addClient(client);
 			}
 			// remove room from client's ownerRooms
-			this.getOwnerRooms().remove(room);
+			clientInfo.getOwnerRooms().remove(room);
 			// remove room from roomlist
 			this.mainHall.removeRoom(room);
 			// reply RoomList message to the owner
@@ -548,7 +561,7 @@ public class ClientThread {
 			// return error response
 			generateSystemMsg(String.format(
 					"%s is a invalid ID or %s has no right to delete", roomId,
-					this.getClientName()));
+					clientInfo.getClientName()));
 		}
 	}
 
@@ -579,9 +592,9 @@ public class ClientThread {
 			String clientId, Integer time) throws IOException {
 		ChatRoom room = this.mainHall.getRoomById(roomId);
 		ClientThread client = room.findClient(clientId);
-		ArrayList<ChatRoom> rooms = this.getOwnerRooms();
+		ArrayList<ChatRoom> rooms = clientInfo.getOwnerRooms();
 		if (room != null && rooms.size() > 0
-				&& room.getOwnerId().equals(this.getClientName())
+				&& room.getOwnerId().equals(clientInfo.getClientName())
 				&& client != null) {
 
 			room.getKickedClients().put(clientId, calculateKickedTime(time));
@@ -629,26 +642,41 @@ public class ClientThread {
 	 */
 	@SuppressWarnings({ "unchecked", "deprecation" })
 	public void quit() throws IOException {
-//		this._client.getCurrentRoom().removeClient(_client);
-//		removeRoomFromMainhall(this._client.getCurrentRoom());
-//		for (ChatRoom room : this._client.getOwnerRooms()) {
-//			if (room.getClients().size() == 0) {
-//				System.out.println("Removed room: " + room.getRoomName());
-//				this.mainHall.removeRoom(room);
-//			}
-//			room.setOwnerId("");
-//		}
-//		// add clientId to reused id
-//		this.formerId.add(this._client.getClientName());
-
+		// clear client info if not authenticated
+		if(!this.checkAuthenticated(clientInfo.getClientName())) {
+			this.clearClientInfo();
+		}
+		// save client info if it is
+		else {
+			// TODO save client info
+		}
+		
 		// inform all users
 		JSONObject obj = new JSONObject();
 		obj.put("type", "quit");
-		obj.put("identity", this.getClientName());
+		obj.put("identity", clientInfo.getClientName());
 		broadMsgToAll(obj.toJSONString());
 		outFlush(outputStream, obj.toJSONString());
 		
 		// TODO suspend this thread until the user re-login
+	}
+	
+	/**
+	 * clear client's information if the client is not authenticated
+	 * @throws IOException
+	 */
+	private void clearClientInfo() throws IOException {
+		clientInfo.getCurrentRoom().removeClient(this);
+		removeRoomFromMainhall(clientInfo.getCurrentRoom());
+		for (ChatRoom room : clientInfo.getOwnerRooms()) {
+			if (room.getClients().size() == 0) {
+				System.out.println("Removed room: " + room.getRoomName());
+				this.mainHall.removeRoom(room);
+			}
+			room.setOwnerId("");
+		}
+		// add clientId to reused id
+		clientInfo.getFormerId().add(clientInfo.getClientName());
 	}
 
 	/**
@@ -661,7 +689,7 @@ public class ClientThread {
 	private void broadMsgToAll(String jsonStr)
 			throws UnsupportedEncodingException, IOException {
 		System.err.println(jsonStr);
-		for (ClientThread client : this.getCurrentRoom().getClients()) {
+		for (ClientThread client : clientInfo.getCurrentRoom().getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
 			outFlush(broadOut, jsonStr);
 		}
@@ -671,10 +699,6 @@ public class ClientThread {
 			throws IOException {
 		_out.write(str + "\n");
 		_out.flush();
-	}
-
-	public ArrayList<String> getFormerId() {
-		return formerId;
 	}
 
 	private OutputStreamWriter getOutputStream() {

@@ -64,7 +64,7 @@ public class ClientThreadHandler implements Runnable {
 					}
 					String msg = in.readLine();
 					System.out.println("receive message from "
-							+ _client.getClientName() + ": " + msg);
+							+ _client.getClientInfo().getClientName() + ": " + msg);
 
 					String type = decodeRequestJSON(msg);
 
@@ -72,13 +72,13 @@ public class ClientThreadHandler implements Runnable {
 						break;
 					}
 				}
-//				interruptThread();
+				interruptThread();
 			} catch (EOFException e) {
 				interruptThread();
 				System.out.println("Client disconnected in EOFException");
 				e.printStackTrace();
 			} catch (SocketException s) {
-//				interruptThread();
+				interruptThread();
 				System.out.println("Client disconnected in SocketException");
 				s.printStackTrace();
 			}
@@ -178,22 +178,15 @@ public class ClientThreadHandler implements Runnable {
 			break;
 		case "register":
 			String newIdentity = object.get("identity").toString();
-			String pasword = this._client.encyptPassword(object.get("password").toString());
-//			identitiesHash.put(newIdentity, pasword);
+			String password = this._client.encyptPassword(object.get("password").toString());
 			// TODO: return new identity
-			this._client.changeId(newIdentity);
+			this._client.storeIdentity(newIdentity, password);
 			break;
 		case "login":
 			String identity = object.get("identity").toString();
 			String passwordHash = object.get("password").toString();
-			// verify identity by comparing the password hash
-//			String passwordInServer = identitiesHash.get(identity).toString();
-//			if (passwordInServer.equals(passwordHash)) {
-//				changeId(identity);
-//			} else {
-//				// TODO password is invalid, return error msg
-//				generateSystemMsg("password is invalid");
-//			}
+			
+			this._client.verifyIdentity(identity, passwordHash);
 			break;
 		case "quit":
 			this._client.quit();

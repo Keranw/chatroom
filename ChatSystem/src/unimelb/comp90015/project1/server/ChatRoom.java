@@ -67,7 +67,7 @@ public class ChatRoom {
 
 	public ClientThread findClient(String clientId) {
 		for (ClientThread client : this.clients) {
-			if (client.getClientName().equals(clientId)) {
+			if (client.getClientInfo().getClientName().equals(clientId)) {
 				return client;
 			}
 		}

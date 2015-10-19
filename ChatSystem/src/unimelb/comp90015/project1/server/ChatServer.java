@@ -128,7 +128,7 @@ public class ChatServer {
 	private static void checkUnusedIds() {
 		ArrayList<String> formerNames = new ArrayList<String>();
 		for (ClientThread thread : threadsList) {
-			ArrayList<String> array = thread.getFormerId();
+			ArrayList<String> array = thread.getClientInfo().getFormerId();
 			if (array.size() > 0) {
 				formerNames.addAll(array);
 			}
