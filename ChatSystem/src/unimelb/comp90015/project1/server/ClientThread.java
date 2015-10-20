@@ -28,7 +28,8 @@ public class ClientThread {
 	// Client Info
 	private ClientInfo clientInfo;
 
-	private HashMap<String, String> identitiesHash;
+//	private HashMap<String, String> identitiesHash;
+	private HashMap<String, ClientInfo> clientInfoHash;
 
 	private static MainHall mainHall;
 	private ClientThreadHandler handler;
@@ -43,7 +44,8 @@ public class ClientThread {
 	 * @param id
 	 * @param _mainHall
 	 */
-	public ClientThread(Socket socket, String id, MainHall _mainHall, HashMap<String, String> identitiesHash) {
+	public ClientThread(Socket socket, String id, MainHall _mainHall, 
+			HashMap<String, ClientInfo> clientInfoHash) {
 		this.socket = socket;
 
 		clientInfo = new ClientInfo();
@@ -59,8 +61,10 @@ public class ClientThread {
 			e.printStackTrace();
 		}
 		
+//		this.identitiesHash = identitiesHash;
+		this.clientInfoHash = clientInfoHash;
+		
 		this.handler = new ClientThreadHandler(socket, this);
-		this.identitiesHash = identitiesHash;
 		handlerThread = new Thread(this.handler);
 		handlerThread.setDaemon(true);
 		handlerThread.start();
@@ -123,16 +127,6 @@ public class ClientThread {
 	}
 	
 	/**
-	 * Using SHA1 to generate a hash of password
-	 * to authenticate the identity in server
-	 * @param password
-	 * @return a hash of password
-	 */
-	public static String encyptPassword(String password) {
-		return DigestUtils.sha1Hex(password);
-	}
-	
-	/**
 	 * prevent the args are null
 	 * @param o
 	 * @param arg
@@ -150,9 +144,10 @@ public class ClientThread {
 	@SuppressWarnings("unchecked")
 	public void changeId(String identity)
 			throws IOException {
-		JSONObject obj = new JSONObject();
-		// response New Identity Message
-		generateNewId(obj, identity);
+		// this.formerNames.add(this.client.getClientName());
+		if (checkValidId(identity)) {
+			informIdentity(identity);
+		}
 	}
 	
 	/**
@@ -163,7 +158,8 @@ public class ClientThread {
 	 */
 	public void storeIdentity(String identity, String password) throws IOException {
 		changeId(identity);
-		this.identitiesHash.put(identity, password);
+		clientInfo.setPassword(password);
+		this.clientInfoHash.put(identity, clientInfo);
 	}
 	
 	
@@ -176,11 +172,13 @@ public class ClientThread {
 	 * @throws IOException
 	 */
 	public void verifyIdentity(String identity, String password) throws IOException {
-		String passwordInServer = identitiesHash.get(identity).toString();
+		String passwordInServer = clientInfoHash.get(identity).getPassword();
 		if (passwordInServer.equals(password)) {
-			changeId(identity);
+			informIdentity(identity);
+			// restore client's info
+			this.restoreClientInfo(identity);
 		} else {
-			// TODO password is invalid, return error msg
+			// password is invalid, return error msg
 			generateSystemMsg("password is invalid");
 		}
 	}
@@ -192,40 +190,31 @@ public class ClientThread {
 	 * @return false if not
 	 */
 	private boolean checkAuthenticated(String identity) {
-		if (this.identitiesHash.get(identity) != null) {
+		if (this.clientInfoHash.get(identity) != null) {
 			return true;
 		}
 		return false;
 	}
-
-	/**
-	 * @param obj
-	 * @param identity
-	 * @throws IOException
-	 */
+	
 	@SuppressWarnings("unchecked")
-	private void generateNewId(JSONObject obj, String identity)
-			throws IOException {
-
-		// this.formerNames.add(this.client.getClientName());
-		if (checkValidId(identity)) {
-			// update the ownership
-			if (clientInfo.getOwnerRooms().size() > 0) {
-				for (ChatRoom room : clientInfo.getOwnerRooms()) {
-					room.setOwnerId(identity);
-				}
+	private void informIdentity(String identity) throws IOException {
+		// update the ownership
+		if (clientInfo.getOwnerRooms().size() > 0) {
+			for (ChatRoom room : clientInfo.getOwnerRooms()) {
+				room.setOwnerId(identity);
 			}
-			obj.put("type", "newidentity");
-			obj.put("former", clientInfo.getClientName());
-			obj.put("identity", identity);
-			// add clientId to reused id
-			clientInfo.getFormerId().add(clientInfo.getClientName());
-			clientInfo.setClientName(identity);
-			// broad change information to all clients online
-			for (ClientThread clientThread : this.mainHall.getAllClients()) {
-				OutputStreamWriter clientOut = clientThread.getOutputStream();
-				outFlush(clientOut, obj.toJSONString());
-			}
+		}
+		JSONObject obj = new JSONObject();
+		obj.put("type", "newidentity");
+		obj.put("former", clientInfo.getClientName());
+		obj.put("identity", identity);
+		// add clientId to reused id
+		clientInfo.getFormerId().add(clientInfo.getClientName());
+		clientInfo.setClientName(identity);
+		// broad change information to all clients online
+		for (ClientThread clientThread : this.mainHall.getAllClients()) {
+			OutputStreamWriter clientOut = clientThread.getOutputStream();
+			outFlush(clientOut, obj.toJSONString());
 		}
 	}
 
@@ -578,7 +567,6 @@ public class ClientThread {
 				&& currentRoom.getOwnerId() == "") {
 			deleteRoom(currentRoom.getRoomName());
 		}
-
 	}
 
 	/**
@@ -642,13 +630,15 @@ public class ClientThread {
 	 */
 	@SuppressWarnings({ "unchecked", "deprecation" })
 	public void quit() throws IOException {
+		clientInfo.getCurrentRoom().removeClient(this);
 		// clear client info if not authenticated
 		if(!this.checkAuthenticated(clientInfo.getClientName())) {
 			this.clearClientInfo();
 		}
 		// save client info if it is
 		else {
-			// TODO save client info
+			// save client info
+			this.saveClientInfo();
 		}
 		
 		// inform all users
@@ -657,8 +647,6 @@ public class ClientThread {
 		obj.put("identity", clientInfo.getClientName());
 		broadMsgToAll(obj.toJSONString());
 		outFlush(outputStream, obj.toJSONString());
-		
-		// TODO suspend this thread until the user re-login
 	}
 	
 	/**
@@ -666,7 +654,6 @@ public class ClientThread {
 	 * @throws IOException
 	 */
 	private void clearClientInfo() throws IOException {
-		clientInfo.getCurrentRoom().removeClient(this);
 		removeRoomFromMainhall(clientInfo.getCurrentRoom());
 		for (ChatRoom room : clientInfo.getOwnerRooms()) {
 			if (room.getClients().size() == 0) {
@@ -677,6 +664,18 @@ public class ClientThread {
 		}
 		// add clientId to reused id
 		clientInfo.getFormerId().add(clientInfo.getClientName());
+	}
+	
+	/**
+	 * store client's info
+	 */
+	private void saveClientInfo() {
+		clientInfoHash.put(clientInfo.getClientName(), clientInfo);
+	}
+	
+	private void restoreClientInfo(String identity) {
+		ClientInfo oldClientInfo = clientInfoHash.get(identity);
+		clientInfo.restoreClientInfo(oldClientInfo);
 	}
 
 	/**

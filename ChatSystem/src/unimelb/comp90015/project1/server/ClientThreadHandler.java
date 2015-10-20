@@ -9,6 +9,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -19,6 +21,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import unimelb.comp90015.project1.cypt.Crypto;
 
 /**
  * @author kliu2
@@ -73,6 +77,9 @@ public class ClientThreadHandler implements Runnable {
 					}
 				}
 				interruptThread();
+			} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			} catch (EOFException e) {
 				interruptThread();
 				System.out.println("Client disconnected in EOFException");
@@ -110,8 +117,10 @@ public class ClientThreadHandler implements Runnable {
 	 * @param jsonStr
 	 * @return
 	 * @throws IOException
+	 * @throws InvalidKeySpecException 
+	 * @throws NoSuchAlgorithmException 
 	 */
-	public String decodeRequestJSON(String jsonStr) throws IOException {
+	public String decodeRequestJSON(String jsonStr) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
 		if (jsonStr == null)
 			return null;
 
@@ -178,15 +187,26 @@ public class ClientThreadHandler implements Runnable {
 			break;
 		case "register":
 			String newIdentity = object.get("identity").toString();
-			String password = this._client.encyptPassword(object.get("password").toString());
-			// TODO: return new identity
-			this._client.storeIdentity(newIdentity, password);
+			// TODO use server's private key to decrypt password and passwordhash
+			String password = object.get("password").toString();
+			String passwordHash = object.get("passwordHash").toString();
+			
+			// check password is not modified during transmission
+			if(Crypto.validatePassword(password, passwordHash)){
+				// TODO: return new identity
+				this._client.storeIdentity(newIdentity, password);
+			}
 			break;
 		case "login":
 			String identity = object.get("identity").toString();
-			String passwordHash = object.get("password").toString();
+			// TODO use server's private key to decrypt password and passwordhash
+			String _password = object.get("password").toString();
+			String _passwordHash = object.get("passwordHash").toString();
 			
-			this._client.verifyIdentity(identity, passwordHash);
+			// check password is not modified during transmission
+			if(Crypto.validatePassword(_password, _passwordHash)) {
+				this._client.verifyIdentity(identity, _password);
+			}
 			break;
 		case "quit":
 			this._client.quit();

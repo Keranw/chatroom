@@ -3,16 +3,26 @@ package unimelb.comp90015.project1.client;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
 import org.json.simple.JSONObject;
 import org.apache.commons.codec.digest.DigestUtils;
+
+import unimelb.comp90015.project1.cypt.Crypto;
 
 /**
  * @author kliu2 
@@ -80,13 +90,21 @@ public class ClientSender implements Runnable {
 	}
 	
 	/**
-	 * Using SHA1 to generate a hash of password
+	 * Using PBKDF2WithHmacSHA1 to generate a hash of password
 	 * to authenticate the identity in server
 	 * @param password
 	 * @return a hash of password
 	 */
-	private static String encyptPassword(String password) {
-		return DigestUtils.sha1Hex(password);
+	private static String generatedSecuredPasswordHash(String passwordToHash) {
+		String passwordHash = null;
+		try {
+			passwordHash = Crypto.generateStorngPasswordHash(passwordToHash);
+		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        System.out.println(passwordHash);
+		return passwordHash;
 	}
 
 	/**
@@ -106,14 +124,20 @@ public class ClientSender implements Runnable {
 			break;
 		case "register":
 			// send a plain text of password when guest register
+			String password = args[2];
 			requestObj.put("identity", args[1]);
-			requestObj.put("password", encyptPassword(args[2]));
+			// TODO use server's public key to encrypt password and passwordhash
+			requestObj.put("password", password);
+			requestObj.put("passwordHash", generatedSecuredPasswordHash(password));
 			break;
 		case "login":
 			// send password hash to server and server would verify the string
 			// after guest has registered
+			String _password = args[2];
 			requestObj.put("identity", args[1]);
-			requestObj.put("password", encyptPassword(args[2]));
+			// TODO use server's public key to encrypt password and passwordhash
+			requestObj.put("password", _password);
+			requestObj.put("passwordHash", generatedSecuredPasswordHash(_password));
 			break;
 		case "identitychange":
 			requestObj.put("identity", args[1]);
