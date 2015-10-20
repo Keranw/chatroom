@@ -4,9 +4,13 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.Policy.Parameters;
+import java.util.Random;
 import java.util.Scanner;
 
 import javax.net.SocketFactory;
@@ -37,6 +41,7 @@ public class ChatClient {
 	private static ClientSender sender;
 
 	private static CmdOptions cmdOptions;
+	private static OutputStreamWriter out;
 
 	public static void main(String[] args) throws IOException {
 		Socket socket = null;
@@ -65,6 +70,23 @@ public class ChatClient {
 			
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), StandardCharsets.UTF_8));
+////////////DH exchange////////////////////
+			out = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
+			String ans = in.readLine();
+			JSONParser parsor = new JSONParser();
+			JSONObject result = (JSONObject)parsor.parse(ans);
+			BigInteger base = new BigInteger(result.get("base").toString());
+			BigInteger modulo = new BigInteger(result.get("modulo").toString());
+			BigInteger sTemp = new BigInteger(result.get("temp").toString());
+			BigInteger privateKey = generateRandom(2048);
+			BigInteger cTemp = modExp(base, privateKey, modulo);
+			BigInteger sharedKey = modExp(sTemp, privateKey, modulo);
+			System.out.println(sharedKey);
+			JSONObject feedback = new JSONObject();
+			feedback.put("cTemp", cTemp.toString());
+			out.write(feedback.toJSONString() + "\n");
+			out.flush();
+/////////////////////////////////////////////////
 			// Reading from console
 			Scanner cmdin = new Scanner(System.in);
 
@@ -72,7 +94,8 @@ public class ChatClient {
 				// forcing TCP to receive data immediately
 				// TODO EOFException when server shuts down
 				String response = in.readLine();
-
+//#########################Decrypt################################
+//################################################################
 				if (response != null) {
 					try {
 						decodeResponse(socket, cmdin, response);
@@ -88,6 +111,34 @@ public class ChatClient {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (ParseException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
+	///////////////////////////
+	///     				 //
+	/// 	DH exchange		 //
+	///						 //	
+	///////////////////////////
+	private static BigInteger generateRandom(int size){
+		Random rnd = new Random();
+		BigInteger result = new BigInteger(size, rnd);
+		return result;
+	}
+	
+	private static BigInteger modExp(BigInteger base, BigInteger exp, BigInteger modulo) {
+		BigInteger two = new BigInteger("2");
+		if (exp.equals(BigInteger.ZERO)) {
+			return BigInteger.ONE;
+		} else {
+			BigInteger temp = modExp(base, exp.divide(two), modulo);
+			BigInteger result = (temp.multiply(temp)).mod(modulo);
+			if (exp.mod(two).equals(BigInteger.ONE)) {
+				result = (result.multiply(base)).mod(modulo);
+			}
+			return result;
 		}
 	}
 
