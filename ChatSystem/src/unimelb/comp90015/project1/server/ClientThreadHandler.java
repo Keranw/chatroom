@@ -67,6 +67,9 @@ public class ClientThreadHandler implements Runnable {
 						this._client.sendFirstId();
 					}
 					String msg = in.readLine();
+//########################decrypt##########################################
+					
+//#########################################################################
 					System.out.println("receive message from "
 							+ _client.getClientInfo().getClientName() + ": " + msg);
 

@@ -6,17 +6,21 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  * @author kliu2
@@ -43,6 +47,7 @@ public class ClientThread {
 	 * @param socket
 	 * @param id
 	 * @param _mainHall
+	 * @throws ParseException 
 	 */
 	public ClientThread(Socket socket, String id, MainHall _mainHall, 
 			HashMap<String, ClientInfo> clientInfoHash) {
@@ -56,7 +61,28 @@ public class ClientThread {
 		try {
 			outputStream = new OutputStreamWriter(socket.getOutputStream(),
 					StandardCharsets.UTF_8);
+///////////////////DH exchange////////////////////////////////
+			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+			BigInteger base = generateRandom(3);
+			BigInteger modulo = generateRandom(2048);
+			BigInteger privateKey = generateRandom(2048);
+			BigInteger temp = modExp(base, privateKey, modulo);
+			JSONObject ExRequest = new JSONObject();
+			ExRequest.put("base", base.toString());
+			ExRequest.put("modulo", modulo.toString());
+			ExRequest.put("temp", temp.toString());
+			outFlush(outputStream, (ExRequest.toJSONString()));
+			String ans = in.readLine();
+			JSONParser parsor = new JSONParser();
+			JSONObject result = (JSONObject)parsor.parse(ans);
+			BigInteger cTemp = new BigInteger(result.get("cTemp").toString());
+			BigInteger sharedKey = modExp(cTemp, privateKey, modulo);
+			System.out.println(sharedKey);
+///////////////////////////////////////////////////////////////////
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -74,6 +100,32 @@ public class ClientThread {
 	public void interruptThread() {
 		handlerThread.interrupt();
 	}
+	
+	///////////////////////////
+	///     				 //
+	/// 	DH exchange		 //
+	///						 //	
+	///////////////////////////
+	private BigInteger generateRandom(int size){
+		Random rnd = new Random();
+		BigInteger result = new BigInteger(size, rnd);
+		return result;
+	}
+	
+	private BigInteger modExp(BigInteger base, BigInteger exp, BigInteger modulo) {
+		BigInteger two = new BigInteger("2");
+		if (exp.equals(BigInteger.ZERO)) {
+			return BigInteger.ONE;
+		} else {
+			BigInteger temp = modExp(base, exp.divide(two), modulo);
+			BigInteger result = (temp.multiply(temp)).mod(modulo);
+			if (exp.mod(two).equals(BigInteger.ONE)) {
+				result = (result.multiply(base)).mod(modulo);
+			}
+			return result;
+		}
+	}
+	
 	
 	///////////////////////////
 	///     				 //
@@ -696,6 +748,7 @@ public class ClientThread {
 
 	private synchronized void outFlush(OutputStreamWriter _out, String str)
 			throws IOException {
+		
 		_out.write(str + "\n");
 		_out.flush();
 	}

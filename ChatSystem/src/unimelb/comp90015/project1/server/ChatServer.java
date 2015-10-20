@@ -9,6 +9,7 @@ import java.util.*;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocketFactory;
 
+import org.json.simple.parser.ParseException;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -29,7 +30,7 @@ public class ChatServer {
 	private final static String clientTag = "guest-";
 	private static Integer initialId = 1;
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ParseException {
 		try {
 			initialise();
 			// parser the parameters from the command line
@@ -95,9 +96,10 @@ public class ChatServer {
 	 * 
 	 * @param socket
 	 * @throws InterruptedException
+	 * @throws ParseException 
 	 */
 	private static void createNewClient(Socket socket)
-			throws InterruptedException {
+			throws InterruptedException, ParseException {
 		String newId = generateNewId();
 		// Java creates new socket object for each connection.
 		ClientThread clientThread = new ClientThread(socket, newId, mainHall, clientInfoHash);
