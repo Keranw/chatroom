@@ -190,26 +190,16 @@ public class ClientThreadHandler implements Runnable {
 			break;
 		case "register":
 			String newIdentity = object.get("identity").toString();
-			// TODO use server's private key to decrypt password and passwordhash
-			String password = object.get("password").toString();
 			String passwordHash = object.get("passwordHash").toString();
-			
-			// check password is not modified during transmission
-			if(Crypto.validatePassword(password, passwordHash)){
-				// TODO: return new identity
-				this._client.storeIdentity(newIdentity, password);
-			}
+			this._client.storeIdentity(newIdentity, passwordHash);
 			break;
 		case "login":
 			String identity = object.get("identity").toString();
-			// TODO use server's private key to decrypt password and passwordhash
-			String _password = object.get("password").toString();
 			String _passwordHash = object.get("passwordHash").toString();
 			
 			// check password is not modified during transmission
-			if(Crypto.validatePassword(_password, _passwordHash)) {
-				this._client.verifyIdentity(identity, _password);
-			}
+			this._client.verifyIdentity(identity, _passwordHash);
+
 			break;
 		case "quit":
 			this._client.quit();

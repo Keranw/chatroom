@@ -1,6 +1,9 @@
 package unimelb.comp90015.project1.client;
 
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.math.BigInteger;
@@ -12,6 +15,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +27,8 @@ import javax.crypto.spec.PBEKeySpec;
 
 import org.json.simple.JSONObject;
 import org.apache.commons.codec.digest.DigestUtils;
+
+import com.sun.org.apache.bcel.internal.generic.LADD;
 
 import unimelb.comp90015.project1.cypt.Crypto;
 
@@ -74,7 +82,7 @@ public class ClientSender implements Runnable {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	private static void parseCommand(String command) throws IOException {
+	private void parseCommand(String command) throws IOException {
 		String type = null;
 		if(command.matches("^#[\\w\\W]+")) {
 			String[] params = command.trim().split("\\s+");
@@ -95,16 +103,72 @@ public class ClientSender implements Runnable {
 	 * @param password
 	 * @return a hash of password
 	 */
-	private static String generatedSecuredPasswordHash(String passwordToHash) {
+	private String generatedSecuredPasswordHash(String identity, String passwordToHash) {
 		String passwordHash = null;
 		try {
-			passwordHash = Crypto.generateStorngPasswordHash(passwordToHash);
+			passwordHash = Crypto.generateStorngPasswordHash(passwordToHash, getSalt(identity));
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         System.out.println(passwordHash);
 		return passwordHash;
+	}
+	
+	private String getSalt(String identity) throws NoSuchAlgorithmException
+    {
+		// TODO get salt from disk if not generate a new one
+		String saltStr = getSaltFromDisk(identity);
+		if(saltStr == null) {
+			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+			byte[] salt = new byte[16];
+			sr.nextBytes(salt);
+			saltStr = salt.toString();
+	        // TODO store the salt in disk for specific client
+			storeSaltinDisk(identity, saltStr);
+		}
+        return saltStr;
+    }
+	
+	private String getSaltFromDisk(String identity) {
+		Map<String, String> ldapContent = new HashMap<String, String>();
+		Properties properties = new Properties();
+		String filename = identity + ".properties";
+		File file = new File(filename);
+		
+		try {
+			if(file.exists()) {
+				properties.load(new FileInputStream(filename));
+			} else {
+				return null;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		for (String key : properties.stringPropertyNames()) {
+		   ldapContent.put(key, properties.get(key).toString());
+		}
+		return ldapContent.get(identity).toString();
+	}
+	
+	private void storeSaltinDisk(String identity, String saltStr) {
+		Map<String, String> ldapContent = new HashMap<String, String>();
+		ldapContent.put(identity, saltStr);
+		Properties properties = new Properties();
+		String filename = identity + ".properties";
+		
+		for (Map.Entry<String,String> entry : ldapContent.entrySet()) {
+		    properties.put(entry.getKey(), entry.getValue());
+		}
+
+		try {
+			properties.store(new FileOutputStream(filename), null);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -114,7 +178,7 @@ public class ClientSender implements Runnable {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	public static void constructJSON(String type, String[] args)
+	public void constructJSON(String type, String[] args)
 			throws IOException {
 		JSONObject requestObj = new JSONObject();
 		requestObj.put("type", type);
@@ -124,20 +188,19 @@ public class ClientSender implements Runnable {
 			break;
 		case "register":
 			// send a plain text of password when guest register
+			String identity = args[1];
 			String password = args[2];
-			requestObj.put("identity", args[1]);
-			// TODO use server's public key to encrypt password and passwordhash
-			requestObj.put("password", password);
-			requestObj.put("passwordHash", generatedSecuredPasswordHash(password));
+			requestObj.put("identity", identity);
+			requestObj.put("passwordHash", generatedSecuredPasswordHash(identity, password));
+			
 			break;
 		case "login":
 			// send password hash to server and server would verify the string
 			// after guest has registered
+			String _identity = args[1];
 			String _password = args[2];
 			requestObj.put("identity", args[1]);
-			// TODO use server's public key to encrypt password and passwordhash
-			requestObj.put("password", _password);
-			requestObj.put("passwordHash", generatedSecuredPasswordHash(_password));
+			requestObj.put("passwordHash", generatedSecuredPasswordHash(_identity, _password));
 			break;
 		case "identitychange":
 			requestObj.put("identity", args[1]);

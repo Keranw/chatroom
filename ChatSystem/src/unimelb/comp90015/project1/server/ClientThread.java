@@ -10,6 +10,8 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
@@ -21,6 +23,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import unimelb.comp90015.project1.cypt.Crypto;
 
 /**
  * @author kliu2
@@ -209,6 +213,11 @@ public class ClientThread {
 	 * @throws IOException
 	 */
 	public void storeIdentity(String identity, String password) throws IOException {
+		if(checkAuthenticated(identity)) {
+			generateSystemMsg(identity + " has logged in");
+			return;
+		}
+		
 		changeId(identity);
 		clientInfo.setPassword(password);
 		this.clientInfoHash.put(identity, clientInfo);
@@ -222,10 +231,17 @@ public class ClientThread {
 	 * @param identity
 	 * @param password
 	 * @throws IOException
+	 * @throws InvalidKeySpecException 
+	 * @throws NoSuchAlgorithmException 
 	 */
-	public void verifyIdentity(String identity, String password) throws IOException {
+	public void verifyIdentity(String identity, String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+		if(!checkAuthenticated(identity)) {
+			generateSystemMsg(identity + " hasn't registered yet");
+			return;
+		}
+		
 		String passwordInServer = clientInfoHash.get(identity).getPassword();
-		if (passwordInServer.equals(password)) {
+		if (password.equals(passwordInServer)) {
 			informIdentity(identity);
 			// restore client's info
 			this.restoreClientInfo(identity);
