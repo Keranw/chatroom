@@ -256,11 +256,13 @@ public class ClientThread {
 	 * @param identity
 	 * @return true if the identity is authenticated
 	 * @return false if not
+	 * @throws IOException 
 	 */
-	private boolean checkAuthenticated(String identity) {
+	private boolean checkAuthenticated(String identity) throws IOException {
 		if (this.clientInfoHash.get(identity) != null) {
 			return true;
 		}
+		generateSystemMsg("client is not authenticated");
 		return false;
 	}
 	
@@ -651,7 +653,8 @@ public class ClientThread {
 		ArrayList<ChatRoom> rooms = clientInfo.getOwnerRooms();
 		if (room != null && rooms.size() > 0
 				&& room.getOwnerId().equals(clientInfo.getClientName())
-				&& client != null) {
+				&& client != null
+				&& checkAuthenticated(clientInfo.getClientName())) {
 
 			room.getKickedClients().put(clientId, calculateKickedTime(time));
 
@@ -659,7 +662,7 @@ public class ClientThread {
 			client.joinRoom("mainhall");
 		} else {
 			// return error response, room is invalid or user is invalid
-			generateSystemMsg("invalid roomId or UserId");
+			generateSystemMsg("invalid roomId or userId or user is not authenticated");
 		}
 	}
 

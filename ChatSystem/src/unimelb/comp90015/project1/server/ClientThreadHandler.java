@@ -189,17 +189,20 @@ public class ClientThreadHandler implements Runnable {
 			this._client.broadMessage(content);
 			break;
 		case "register":
-			String newIdentity = object.get("identity").toString();
-			String passwordHash = object.get("passwordHash").toString();
-			this._client.storeIdentity(newIdentity, passwordHash);
+			if (this._client.checkArgs(object, "identity") && this._client.checkArgs(object, "passwordHash")) {
+				String newIdentity = object.get("identity").toString();
+				String passwordHash = object.get("passwordHash").toString();
+				this._client.storeIdentity(newIdentity, passwordHash);
+			}
 			break;
 		case "login":
-			String identity = object.get("identity").toString();
-			String _passwordHash = object.get("passwordHash").toString();
-			
-			// check password is not modified during transmission
-			this._client.verifyIdentity(identity, _passwordHash);
-
+			if (this._client.checkArgs(object, "identity") && this._client.checkArgs(object, "passwordHash")) {
+				String identity = object.get("identity").toString();
+				String _passwordHash = object.get("passwordHash").toString();
+				
+				// check password is not modified during transmission
+				this._client.verifyIdentity(identity, _passwordHash);
+			}
 			break;
 		case "quit":
 			this._client.quit();
