@@ -104,6 +104,7 @@ public class ChatClient {
 					}
 				}
 			}
+			System.exit(0);
 		} catch (EOFException e) {
 			// sent a quit command to server if exception occurs
 			sender.constructJSON("quit", null);

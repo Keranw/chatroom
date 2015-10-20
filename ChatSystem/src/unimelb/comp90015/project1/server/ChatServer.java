@@ -21,7 +21,8 @@ import unimelb.comp90015.project1.server.ClientThread;
 public class ChatServer {
 	private static MainHall mainHall;
 	private static HashMap<String, Integer> allUsedIds;
-	private static HashMap<String, String> identitiesHash;
+//	private static HashMap<String, String> identitiesHash;
+	private static HashMap<String, ClientInfo> clientInfoHash;
 	private static Queue<String> unUsedIds;
 	private static ArrayList<ClientThread> threadsList;
 
@@ -55,7 +56,8 @@ public class ChatServer {
 
 				// To store the all used Id and reUsed Ids
 				allUsedIds = new HashMap<String, Integer>();
-				identitiesHash = new HashMap<String, String>();
+//				identitiesHash = new HashMap<String, String>();
+				clientInfoHash = new HashMap<String, ClientInfo>();
 				unUsedIds = new LinkedList<String>();
 				threadsList = new ArrayList<ClientThread>();
 				while (true) {
@@ -98,7 +100,7 @@ public class ChatServer {
 			throws InterruptedException {
 		String newId = generateNewId();
 		// Java creates new socket object for each connection.
-		ClientThread clientThread = new ClientThread(socket, newId, mainHall, identitiesHash);
+		ClientThread clientThread = new ClientThread(socket, newId, mainHall, clientInfoHash);
 		threadsList.add(clientThread);
 		System.out.println(newId + "Connected");
 	}
