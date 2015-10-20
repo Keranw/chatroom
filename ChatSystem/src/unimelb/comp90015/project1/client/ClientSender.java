@@ -31,9 +31,10 @@ import org.apache.commons.codec.digest.DigestUtils;
 import com.sun.org.apache.bcel.internal.generic.LADD;
 
 import unimelb.comp90015.project1.cypt.Crypto;
+import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
- * @author kliu2 
+ * @author kliu2
  * A Sender Thread to send command to server should parse the command
  * from command line to JSON Strings
  *
@@ -43,6 +44,7 @@ public class ClientSender implements Runnable {
 	private Client client;
 	private Scanner cmdin;
 	private static OutputStreamWriter out;
+	public StreamCipher cCipher;
 
 	/**
 	 * Constructor
@@ -50,10 +52,11 @@ public class ClientSender implements Runnable {
 	 * @param cmdin
 	 * @param client
 	 */
-	public ClientSender(Socket socket, Scanner cmdin, Client client) {
+	public ClientSender(Socket socket, Scanner cmdin, Client client, StreamCipher ccipher) {
 		this.socket = socket;
 		this.client = client;
 		this.cmdin = cmdin;
+		this.cCipher = ccipher;
 	}
 
 	@Override
@@ -68,7 +71,7 @@ public class ClientSender implements Runnable {
 
 				if (msg != null || msg != "") {
 					// parse command into json and send it to server
-					parseCommand(msg);
+					parseCommand(msg, cCipher);
 				}
 			}
 		} catch (IOException e) {
@@ -82,18 +85,19 @@ public class ClientSender implements Runnable {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	private void parseCommand(String command) throws IOException {
+	private void parseCommand(String command, StreamCipher temp) throws IOException {
 		String type = null;
 		if(command.matches("^#[\\w\\W]+")) {
 			String[] params = command.trim().split("\\s+");
 			
 			type = params[0].split("#")[1];
-			constructJSON(type, params);
+			constructJSON(type, params, temp);
 		} else {
 			type = "message";
 			String[] param = new String[1];
 			param[0] = command;
-			constructJSON(type, param);
+			constructJSON(type, param, temp);
+			
 		}
 	}
 	
@@ -178,7 +182,7 @@ public class ClientSender implements Runnable {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	public void constructJSON(String type, String[] args)
+	public void constructJSON(String type, String[] args, StreamCipher temp)
 			throws IOException {
 		JSONObject requestObj = new JSONObject();
 		requestObj.put("type", type);
@@ -228,8 +232,11 @@ public class ClientSender implements Runnable {
 			break;
 		}
 		
+//^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		String result = temp.encrypt(requestObj.toJSONString());
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		// send jsonstring to server 
-		out.write((requestObj.toJSONString() + "\n"));
+		out.write((result + "\n"));
 		out.flush();
 	}
 }

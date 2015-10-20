@@ -25,10 +25,11 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import unimelb.comp90015.project1.cypt.StreamCipher;
 import unimelb.comp90015.project1.server.ChatRoom;
 
 /**
- * @author kliu2 
+ * @author kliu2
  * the main entrance for client, always to receive input from
  * server and print formated json string on standard output 
  */
@@ -42,6 +43,7 @@ public class ChatClient {
 
 	private static CmdOptions cmdOptions;
 	private static OutputStreamWriter out;
+	public static StreamCipher cCipher;
 
 	public static void main(String[] args) throws IOException {
 		Socket socket = null;
@@ -89,12 +91,15 @@ public class ChatClient {
 /////////////////////////////////////////////////
 			// Reading from console
 			Scanner cmdin = new Scanner(System.in);
-
+			BigInteger a = new BigInteger("73");
+			BigInteger b = new BigInteger("29");
+			cCipher = new StreamCipher(sharedKey, modulo, a, b);
 			while (!isQuit) {
 				// forcing TCP to receive data immediately
 				// TODO EOFException when server shuts down
 				String response = in.readLine();
 //#########################Decrypt################################
+				response = cCipher.decrypt(response);
 //################################################################
 				if (response != null) {
 					try {
@@ -107,7 +112,7 @@ public class ChatClient {
 			System.exit(0);
 		} catch (EOFException e) {
 			// sent a quit command to server if exception occurs
-			sender.constructJSON("quit", null);
+			sender.constructJSON("quit", null, cCipher);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -177,7 +182,7 @@ public class ChatClient {
 					room.setRoomId("mainhall");
 					client.setCurrentRoom(room);
 
-					sender = new ClientSender(socket, cmdin, client);
+					sender = new ClientSender(socket, cmdin, client, cCipher);
 					senderThread = new Thread(sender);
 					msg = String.format("Connected to %s as %s.",
 							cmdOptions.hostname, object.get("identity")

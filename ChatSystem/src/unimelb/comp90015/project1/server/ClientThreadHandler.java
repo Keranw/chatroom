@@ -23,6 +23,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import unimelb.comp90015.project1.cypt.Crypto;
+import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
  * @author kliu2
@@ -33,16 +34,17 @@ public class ClientThreadHandler implements Runnable {
 	private ClientThread _client;
 	private boolean isFirstLog;
 	private BufferedReader in;
+	public StreamCipher sCipher;
 
 	/**
 	 * Constructor
 	 * @param socket
 	 * @param client
 	 */
-	public ClientThreadHandler(Socket socket, ClientThread client) {
+	public ClientThreadHandler(Socket socket, ClientThread client, StreamCipher scipher) {
 		this.socket = socket;
 		this._client = client;
-		
+		this.sCipher = scipher;
 		try {
 			in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), "UTF-8"));
@@ -68,7 +70,7 @@ public class ClientThreadHandler implements Runnable {
 					}
 					String msg = in.readLine();
 //########################decrypt##########################################
-					
+					msg = sCipher.decrypt(msg);
 //#########################################################################
 					System.out.println("receive message from "
 							+ _client.getClientInfo().getClientName() + ": " + msg);

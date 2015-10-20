@@ -23,8 +23,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 import unimelb.comp90015.project1.cypt.Crypto;
+import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
+
+import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
  * @author kliu2
@@ -45,6 +47,7 @@ public class ClientThread {
 	
 	private OutputStreamWriter outputStream;
 
+	public StreamCipher sCipher;
 	/**
 	 * Constructor
 	 * start a thread to listen this client, receiving and sending messages
@@ -75,13 +78,17 @@ public class ClientThread {
 			ExRequest.put("base", base.toString());
 			ExRequest.put("modulo", modulo.toString());
 			ExRequest.put("temp", temp.toString());
-			outFlush(outputStream, (ExRequest.toJSONString()));
+			outputStream.write(ExRequest.toJSONString() + "\n");
+			outputStream.flush();
 			String ans = in.readLine();
 			JSONParser parsor = new JSONParser();
 			JSONObject result = (JSONObject)parsor.parse(ans);
 			BigInteger cTemp = new BigInteger(result.get("cTemp").toString());
 			BigInteger sharedKey = modExp(cTemp, privateKey, modulo);
 			System.out.println(sharedKey);
+			BigInteger a = new BigInteger("73");
+			BigInteger b = new BigInteger("29");
+			this.sCipher = new StreamCipher(sharedKey, modulo, a, b);
 ///////////////////////////////////////////////////////////////////
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -94,7 +101,7 @@ public class ClientThread {
 //		this.identitiesHash = identitiesHash;
 		this.clientInfoHash = clientInfoHash;
 		
-		this.handler = new ClientThreadHandler(socket, this);
+		this.handler = new ClientThreadHandler(socket, this, sCipher);
 		handlerThread = new Thread(this.handler);
 		handlerThread.setDaemon(true);
 		handlerThread.start();
@@ -767,8 +774,12 @@ public class ClientThread {
 
 	private synchronized void outFlush(OutputStreamWriter _out, String str)
 			throws IOException {
-		
-		_out.write(str + "\n");
+//^^^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+		String result = sCipher.encrypt(str);
+		System.out.println(result);
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		_out.write(result + "\n");
 		_out.flush();
 	}
 
