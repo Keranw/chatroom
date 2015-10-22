@@ -122,58 +122,17 @@ public class ClientSender implements Runnable {
 	private String getSalt(String identity) throws NoSuchAlgorithmException
     {
 		// TODO get salt from disk if not generate a new one
-		String saltStr = getSaltFromDisk(identity);
+		String saltStr = this.client.getSaltFromDisk(identity);
 		if(saltStr == null) {
 			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 			byte[] salt = new byte[16];
 			sr.nextBytes(salt);
 			saltStr = salt.toString();
 	        // TODO store the salt in disk for specific client
-			storeSaltinDisk(identity, saltStr);
+			this.client.storeSaltinDisk(identity, saltStr);
 		}
         return saltStr;
     }
-	
-	private String getSaltFromDisk(String identity) {
-		Map<String, String> ldapContent = new HashMap<String, String>();
-		Properties properties = new Properties();
-		String filename = identity + ".properties";
-		File file = new File(filename);
-		
-		try {
-			if(file.exists()) {
-				properties.load(new FileInputStream(filename));
-			} else {
-				return null;
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		for (String key : properties.stringPropertyNames()) {
-		   ldapContent.put(key, properties.get(key).toString());
-		}
-		return ldapContent.get(identity).toString();
-	}
-	
-	private void storeSaltinDisk(String identity, String saltStr) {
-		Map<String, String> ldapContent = new HashMap<String, String>();
-		ldapContent.put(identity, saltStr);
-		Properties properties = new Properties();
-		String filename = identity + ".properties";
-		
-		for (Map.Entry<String,String> entry : ldapContent.entrySet()) {
-		    properties.put(entry.getKey(), entry.getValue());
-		}
-
-		try {
-			properties.store(new FileOutputStream(filename), null);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * construct json string

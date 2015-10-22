@@ -38,7 +38,6 @@ public class ClientThread {
 	// Client Info
 	private ClientInfo clientInfo;
 
-//	private HashMap<String, String> identitiesHash;
 	private HashMap<String, ClientInfo> clientInfoHash;
 
 	private static MainHall mainHall;
@@ -97,7 +96,7 @@ public class ClientThread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-//		this.identitiesHash = identitiesHash;
+
 		this.clientInfoHash = clientInfoHash;
 		
 		this.handler = new ClientThreadHandler(socket, this, sCipher);
@@ -280,6 +279,10 @@ public class ClientThread {
 				room.setOwnerId(identity);
 			}
 		}
+		
+		// update the clientInfoMap
+		String oldIdentity = this.clientInfo.getClientName();	
+		
 		JSONObject obj = new JSONObject();
 		obj.put("type", "newidentity");
 		obj.put("former", clientInfo.getClientName());
@@ -287,6 +290,11 @@ public class ClientThread {
 		// add clientId to reused id
 		clientInfo.getFormerId().add(clientInfo.getClientName());
 		clientInfo.setClientName(identity);
+		
+		// update the clientInfoMap
+		this.clientInfoHash.put(identity, clientInfo);
+		this.clientInfoHash.remove(oldIdentity);
+		
 		// broad change information to all clients online
 		for (ClientThread clientThread : this.mainHall.getAllClients()) {
 			OutputStreamWriter clientOut = clientThread.getOutputStream();

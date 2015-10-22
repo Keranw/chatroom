@@ -193,6 +193,10 @@ public class ChatClient {
 				} else {
 					String newId = object.get("identity").toString();
 					String oldId = object.get("former").toString();
+					
+					// update the authenticated client salt property
+					client.updateSaltInDisk(newId, oldId);
+					
 					if (client.getClientName().equals(oldId)) {
 						client.setClientName(newId);
 					}
