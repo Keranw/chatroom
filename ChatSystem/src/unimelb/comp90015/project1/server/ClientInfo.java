@@ -7,20 +7,20 @@ public class ClientInfo {
 	private String password;
 	private ChatRoom currentRoom;
 	private ArrayList<ChatRoom> ownerRooms;
-	private ArrayList<String> formerId;
-	
+	private ArrayList<String> formerIds;
+
 	public ClientInfo() {
 		currentRoom = new ChatRoom();
 		ownerRooms = new ArrayList<ChatRoom>();
-		formerId = new ArrayList<String>();
+		formerIds = new ArrayList<String>();
 	}
-	
+
 	public void restoreClientInfo(ClientInfo oldClientInfo) {
 		this.clientName = oldClientInfo.getClientName();
 		this.password = oldClientInfo.getPassword();
 		this.ownerRooms.addAll(oldClientInfo.getOwnerRooms());
 	}
-	
+
 	public ChatRoom getCurrentRoom() {
 		return currentRoom;
 	}
@@ -40,7 +40,7 @@ public class ClientInfo {
 	public void addRoom(ChatRoom room) {
 		ownerRooms.add(room);
 	}
-	
+
 	public String getClientName() {
 		return clientName;
 	}
@@ -48,9 +48,19 @@ public class ClientInfo {
 	public void setClientName(String _clientName) {
 		clientName = _clientName;
 	}
+
+	public ArrayList<String> getFormerIds() {
+		return this.formerIds;
+	}
 	
-	public ArrayList<String> getFormerId() {
-		return formerId;
+	public void clearFormerIds() {
+		this.formerIds.clear();
+	}
+	
+	public void addFormerId(String id) {
+		if(this.formerIds.indexOf(id) == -1) {
+			this.formerIds.add(id);
+		}
 	}
 
 	public String getPassword() {

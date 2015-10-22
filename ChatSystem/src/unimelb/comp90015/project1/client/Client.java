@@ -12,9 +12,8 @@ import java.util.Properties;
 import unimelb.comp90015.project1.server.ChatRoom;
 
 /**
- * @author kliu2 
- * Local Client Model to store client local status including
- * current client, current room that client stays, the rooms client owns
+ * @author kliu2 Local Client Model to store client local status including
+ *         current client, current room that client stays, the rooms client owns
  */
 public class Client {
 	private String clientId;
@@ -33,23 +32,23 @@ public class Client {
 		this.currentRoom = new ChatRoom();
 		this.ownerRooms = new ArrayList<ChatRoom>();
 	}
-	
+
 	public void updateSaltInDisk(String newIdentity, String oldIdentity) {
 		String salt = getSaltFromDisk(oldIdentity);
-		if(salt != null) {
+		if (salt != null) {
 			deleteSalt(oldIdentity);
 			storeSaltinDisk(newIdentity, salt);
 		}
 	}
-	
+
 	public String getSaltFromDisk(String identity) {
 		Map<String, String> ldapContent = new HashMap<String, String>();
 		Properties properties = new Properties();
 		String filename = identity + ".properties";
 		File file = new File(filename);
-		
+
 		try {
-			if(file.exists()) {
+			if (file.exists()) {
 				properties.load(new FileInputStream(filename));
 			} else {
 				return null;
@@ -60,19 +59,19 @@ public class Client {
 		}
 
 		for (String key : properties.stringPropertyNames()) {
-		   ldapContent.put(key, properties.get(key).toString());
+			ldapContent.put(key, properties.get(key).toString());
 		}
 		return ldapContent.get(identity).toString();
 	}
-	
+
 	public void storeSaltinDisk(String identity, String saltStr) {
 		Map<String, String> ldapContent = new HashMap<String, String>();
 		ldapContent.put(identity, saltStr);
 		Properties properties = new Properties();
 		String filename = identity + ".properties";
-		
-		for (Map.Entry<String,String> entry : ldapContent.entrySet()) {
-		    properties.put(entry.getKey(), entry.getValue());
+
+		for (Map.Entry<String, String> entry : ldapContent.entrySet()) {
+			properties.put(entry.getKey(), entry.getValue());
 		}
 
 		try {
@@ -82,21 +81,21 @@ public class Client {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void deleteSalt(String identity) {
 		String filename = identity + ".properties";
 		File file = new File(filename);
-		
-		if(file.exists()) {
+
+		if (file.exists()) {
 			file.delete();
 		}
 	}
-	
-	///////////////////////////
-	///     				 //
-	/// Getters and Setters  //
-	///						 //	
-	///////////////////////////
+
+	// /////////////////////////
+	// / //
+	// / Getters and Setters //
+	// / //
+	// /////////////////////////
 
 	public String getClientId() {
 		return clientId;

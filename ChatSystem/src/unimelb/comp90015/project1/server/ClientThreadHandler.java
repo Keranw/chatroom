@@ -26,8 +26,7 @@ import unimelb.comp90015.project1.cypt.Crypto;
 import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
- * @author kliu2
- * A handler to receive and response clients
+ * @author kliu2 A handler to receive and response clients
  */
 public class ClientThreadHandler implements Runnable {
 	private Socket socket;
@@ -38,10 +37,12 @@ public class ClientThreadHandler implements Runnable {
 
 	/**
 	 * Constructor
+	 * 
 	 * @param socket
 	 * @param client
 	 */
-	public ClientThreadHandler(Socket socket, ClientThread client, StreamCipher scipher) {
+	public ClientThreadHandler(Socket socket, ClientThread client,
+			StreamCipher scipher) {
 		this.socket = socket;
 		this._client = client;
 		this.sCipher = scipher;
@@ -69,11 +70,12 @@ public class ClientThreadHandler implements Runnable {
 						this._client.sendFirstId();
 					}
 					String msg = in.readLine();
-//########################decrypt##########################################
+					// ########################decrypt##########################################
 					msg = sCipher.decrypt(msg);
-//#########################################################################
+					// #########################################################################
 					System.out.println("receive message from "
-							+ _client.getClientInfo().getClientName() + ": " + msg);
+							+ _client.getClientInfo().getClientName() + ": "
+							+ msg);
 
 					String type = decodeRequestJSON(msg);
 
@@ -119,13 +121,15 @@ public class ClientThreadHandler implements Runnable {
 
 	/**
 	 * decode json from clients
+	 * 
 	 * @param jsonStr
 	 * @return
 	 * @throws IOException
-	 * @throws InvalidKeySpecException 
-	 * @throws NoSuchAlgorithmException 
+	 * @throws InvalidKeySpecException
+	 * @throws NoSuchAlgorithmException
 	 */
-	public String decodeRequestJSON(String jsonStr) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+	public String decodeRequestJSON(String jsonStr) throws IOException,
+			NoSuchAlgorithmException, InvalidKeySpecException {
 		if (jsonStr == null)
 			return null;
 
@@ -172,7 +176,8 @@ public class ClientThreadHandler implements Runnable {
 			}
 			break;
 		case "kick":
-			if (this._client.checkArgs(object, "identity") && this._client.checkArgs(object, "roomid")
+			if (this._client.checkArgs(object, "identity")
+					&& this._client.checkArgs(object, "roomid")
 					&& this._client.checkArgs(object, "time")) {
 				String user = object.get("identity").toString();
 				roomId = object.get("roomid").toString();
@@ -191,17 +196,19 @@ public class ClientThreadHandler implements Runnable {
 			this._client.broadMessage(content);
 			break;
 		case "register":
-			if (this._client.checkArgs(object, "identity") && this._client.checkArgs(object, "passwordHash")) {
+			if (this._client.checkArgs(object, "identity")
+					&& this._client.checkArgs(object, "passwordHash")) {
 				String newIdentity = object.get("identity").toString();
 				String passwordHash = object.get("passwordHash").toString();
 				this._client.storeIdentity(newIdentity, passwordHash);
 			}
 			break;
 		case "login":
-			if (this._client.checkArgs(object, "identity") && this._client.checkArgs(object, "passwordHash")) {
+			if (this._client.checkArgs(object, "identity")
+					&& this._client.checkArgs(object, "passwordHash")) {
 				String identity = object.get("identity").toString();
 				String _passwordHash = object.get("passwordHash").toString();
-				
+
 				// check password is not modified during transmission
 				this._client.verifyIdentity(identity, _passwordHash);
 			}

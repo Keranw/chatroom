@@ -29,8 +29,7 @@ import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
 import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
- * @author kliu2
- * The Client Model stored in server
+ * @author kliu2 The Client Model stored in server
  */
 public class ClientThread {
 	private Socket socket;
@@ -43,19 +42,21 @@ public class ClientThread {
 	private static MainHall mainHall;
 	private ClientThreadHandler handler;
 	private Thread handlerThread;
-	
+
 	private OutputStreamWriter outputStream;
 
 	public StreamCipher sCipher;
+
 	/**
-	 * Constructor
-	 * start a thread to listen this client, receiving and sending messages
+	 * Constructor start a thread to listen this client, receiving and sending
+	 * messages
+	 * 
 	 * @param socket
 	 * @param id
 	 * @param _mainHall
-	 * @throws ParseException 
+	 * @throws ParseException
 	 */
-	public ClientThread(Socket socket, String id, MainHall _mainHall, 
+	public ClientThread(Socket socket, String id, MainHall _mainHall,
 			HashMap<String, ClientInfo> clientInfoHash) {
 		this.socket = socket;
 
@@ -63,12 +64,13 @@ public class ClientThread {
 		clientInfo.setClientName(id);
 
 		mainHall = _mainHall;
-		
+
 		try {
 			outputStream = new OutputStreamWriter(socket.getOutputStream(),
 					StandardCharsets.UTF_8);
-///////////////////DH exchange////////////////////////////////
-			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+			// /////////////////DH exchange////////////////////////////////
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					socket.getInputStream(), StandardCharsets.UTF_8));
 			BigInteger base = generateRandom(3);
 			BigInteger modulo = generateRandom(2048);
 			BigInteger privateKey = generateRandom(2048);
@@ -81,14 +83,14 @@ public class ClientThread {
 			outputStream.flush();
 			String ans = in.readLine();
 			JSONParser parsor = new JSONParser();
-			JSONObject result = (JSONObject)parsor.parse(ans);
+			JSONObject result = (JSONObject) parsor.parse(ans);
 			BigInteger cTemp = new BigInteger(result.get("cTemp").toString());
 			BigInteger sharedKey = modExp(cTemp, privateKey, modulo);
 			System.out.println(sharedKey);
 			BigInteger a = new BigInteger("73");
 			BigInteger b = new BigInteger("29");
 			this.sCipher = new StreamCipher(sharedKey, modulo, a, b);
-///////////////////////////////////////////////////////////////////
+			// /////////////////////////////////////////////////////////////////
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -98,7 +100,7 @@ public class ClientThread {
 		}
 
 		this.clientInfoHash = clientInfoHash;
-		
+
 		this.handler = new ClientThreadHandler(socket, this, sCipher);
 		handlerThread = new Thread(this.handler);
 		handlerThread.setDaemon(true);
@@ -109,18 +111,18 @@ public class ClientThread {
 	public void interruptThread() {
 		handlerThread.interrupt();
 	}
-	
-	///////////////////////////
-	///     				 //
-	/// 	DH exchange		 //
-	///						 //	
-	///////////////////////////
-	private BigInteger generateRandom(int size){
+
+	// /////////////////////////
+	// / //
+	// / DH exchange //
+	// / //
+	// /////////////////////////
+	private BigInteger generateRandom(int size) {
 		Random rnd = new Random();
 		BigInteger result = new BigInteger(size, rnd);
 		return result;
 	}
-	
+
 	private BigInteger modExp(BigInteger base, BigInteger exp, BigInteger modulo) {
 		BigInteger two = new BigInteger("2");
 		if (exp.equals(BigInteger.ZERO)) {
@@ -134,13 +136,12 @@ public class ClientThread {
 			return result;
 		}
 	}
-	
-	
-	///////////////////////////
-	///     				 //
-	/// Getters and Setters  //
-	///						 //	
-	///////////////////////////
+
+	// /////////////////////////
+	// / //
+	// / Getters and Setters //
+	// / //
+	// /////////////////////////
 	public ClientInfo getClientInfo() {
 		return clientInfo;
 	}
@@ -164,12 +165,12 @@ public class ClientThread {
 	public void setSocket(Socket socket) {
 		this.socket = socket;
 	}
-	
-	///////////////////////////
-	///     				 //
-	/// 		Logic		 //
-	///						 //	
-	///////////////////////////
+
+	// /////////////////////////
+	// / //
+	// / Logic //
+	// / //
+	// /////////////////////////
 	/**
 	 * response a new identity when connection
 	 */
@@ -186,9 +187,10 @@ public class ClientThread {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * prevent the args are null
+	 * 
 	 * @param o
 	 * @param arg
 	 * @return
@@ -203,48 +205,51 @@ public class ClientThread {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void changeId(String identity)
-			throws IOException {
+	public void changeId(String identity) throws IOException {
 		// this.formerNames.add(this.client.getClientName());
 		if (checkValidId(identity)) {
 			informIdentity(identity);
 		}
 	}
-	
+
 	/**
 	 * store identity: password in a hash map
+	 * 
 	 * @param identity
 	 * @param password
 	 * @throws IOException
 	 */
-	public void storeIdentity(String identity, String password) throws IOException {
-		if(checkAuthenticated(identity)) {
+	public void storeIdentity(String identity, String password)
+			throws IOException {
+		if (checkAuthenticated(identity)) {
 			generateSystemMsg(identity + " has logged in");
 			return;
 		}
-		
+
 		changeId(identity);
 		clientInfo.setPassword(password);
 		this.clientInfoHash.put(identity, clientInfo);
 	}
-	
-	
+
 	/**
-	 * Match the password record with the hash received from client to verify the identity
-	 * change the name after passing the verification
-	 * return system error message to client if password is invalid
+	 * Match the password record with the hash received from client to verify
+	 * the identity change the name after passing the verification return system
+	 * error message to client if password is invalid
+	 * 
 	 * @param identity
 	 * @param password
 	 * @throws IOException
-	 * @throws InvalidKeySpecException 
-	 * @throws NoSuchAlgorithmException 
+	 * @throws InvalidKeySpecException
+	 * @throws NoSuchAlgorithmException
 	 */
-	public void verifyIdentity(String identity, String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-		if(!checkAuthenticated(identity)) {
+	public void verifyIdentity(String identity, String password)
+			throws IOException, NoSuchAlgorithmException,
+			InvalidKeySpecException {
+		if (!checkAuthenticated(identity)) {
 			generateSystemMsg(identity + " hasn't registered yet");
 			return;
 		}
-		
+
 		String passwordInServer = clientInfoHash.get(identity).getPassword();
 		if (password.equals(passwordInServer)) {
 			informIdentity(identity);
@@ -255,13 +260,14 @@ public class ClientThread {
 			generateSystemMsg("password is invalid");
 		}
 	}
-	
+
 	/**
 	 * check the identity is authenticated or not
+	 * 
 	 * @param identity
 	 * @return true if the identity is authenticated
 	 * @return false if not
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	private boolean checkAuthenticated(String identity) throws IOException {
 		if (this.clientInfoHash.get(identity) != null) {
@@ -270,7 +276,7 @@ public class ClientThread {
 		generateSystemMsg("client is not authenticated");
 		return false;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void informIdentity(String identity) throws IOException {
 		// update the ownership
@@ -279,41 +285,43 @@ public class ClientThread {
 				room.setOwnerId(identity);
 			}
 		}
-		
+
 		// update the clientInfoMap
-		String oldIdentity = this.clientInfo.getClientName();	
-		
+		String oldIdentity = this.clientInfo.getClientName();
+
 		JSONObject obj = new JSONObject();
 		obj.put("type", "newidentity");
 		obj.put("former", clientInfo.getClientName());
 		obj.put("identity", identity);
 		// add clientId to reused id
-		clientInfo.getFormerId().add(clientInfo.getClientName());
+		clientInfo.addFormerId(clientInfo.getClientName());
 		clientInfo.setClientName(identity);
-		
+
 		// update the clientInfoMap
 		this.clientInfoHash.put(identity, clientInfo);
 		this.clientInfoHash.remove(oldIdentity);
-		
+
 		// broad change information to all clients online
 		for (ClientThread clientThread : this.mainHall.getAllClients()) {
 			OutputStreamWriter clientOut = clientThread.getOutputStream();
-			outFlush(clientOut, obj.toJSONString(), clientThread.getStreamCipher());
+			outFlush(clientOut, obj.toJSONString(),
+					clientThread.getStreamCipher());
 		}
 	}
 
 	/**
 	 * User cannot change their ID to an existent ID or invalid ID format
+	 * 
 	 * @param identity
 	 * @return
 	 * @throws IOException
 	 */
 	private boolean checkValidId(String identity) throws IOException {
 		/**
-		 * The requested identity must be an alphanumeric string starting
-		 * with an upper or lower case character,i.e. upper and lower case
-		 * characters only and digits. The identity must be at least 3
-		 * characters and no more than 16 characters
+		 * The requested identity must be an alphanumeric string starting with
+		 * an upper or lower case character,i.e. upper and lower case characters
+		 * only and digits. The identity must be at least 3 characters and no
+		 * more than 16 characters
 		 */
 		String idPattern = "^[a-zA-Z][A-Za-z0-9]{2,15}$";
 		Pattern id = Pattern.compile(idPattern);
@@ -324,12 +332,12 @@ public class ClientThread {
 							identity));
 			return false;
 		}
-		
+
 		for (ClientThread client : this.mainHall.getAllClients()) {
 			if (identity.equals(client.getClientInfo().getClientName())) {
 				// response invalid identity
-				generateSystemMsg(String.format("%s is now %s",
-						client.getClientInfo().getClientName(), identity));
+				generateSystemMsg(String.format("%s is now %s", client
+						.getClientInfo().getClientName(), identity));
 				return false;
 			}
 		}
@@ -338,6 +346,7 @@ public class ClientThread {
 
 	/**
 	 * Join a room
+	 * 
 	 * @param roomId
 	 * @throws IOException
 	 */
@@ -348,8 +357,8 @@ public class ClientThread {
 			// generate roomchange msg to individual
 			if (currentRoom != null) {
 				generateRoomChangeMsg(currentRoom.getRoomName(),
-						currentRoom.getRoomName(),
-						clientInfo.getClientName(), outputStream);
+						currentRoom.getRoomName(), clientInfo.getClientName(),
+						outputStream);
 			} else {
 				generateRoomChangeMsg("", "", clientInfo.getClientName(),
 						outputStream);
@@ -360,8 +369,7 @@ public class ClientThread {
 				requestedRoom.getClients().add(this);
 				clientInfo.setCurrentRoom(requestedRoom);
 				broadcastToClients(requestedRoom, "",
-						requestedRoom.getRoomName(),
-						clientInfo.getClientName());
+						requestedRoom.getRoomName(), clientInfo.getClientName());
 			}
 		} else {
 			if (forbidClientToConnect(requestedRoom) > 0) {
@@ -370,11 +378,9 @@ public class ClientThread {
 				requestedRoom.addClient(this);
 				clientInfo.setCurrentRoom(requestedRoom);
 				broadcastToClients(currentRoom, currentRoom.getRoomName(),
-						requestedRoom.getRoomName(),
-						clientInfo.getClientName());
+						requestedRoom.getRoomName(), clientInfo.getClientName());
 				broadcastToClients(requestedRoom, currentRoom.getRoomName(),
-						requestedRoom.getRoomName(),
-						clientInfo.getClientName());
+						requestedRoom.getRoomName(), clientInfo.getClientName());
 			}
 		}
 
@@ -386,6 +392,7 @@ public class ClientThread {
 
 	/**
 	 * Validate the kiced time when client tries to re-join the room
+	 * 
 	 * @param room
 	 * @return
 	 */
@@ -405,6 +412,7 @@ public class ClientThread {
 
 	/**
 	 * create a room by given name
+	 * 
 	 * @param roomId
 	 * @throws IOException
 	 */
@@ -441,6 +449,7 @@ public class ClientThread {
 
 	/**
 	 * fetch specific room info
+	 * 
 	 * @param roomId
 	 * @throws IOException
 	 */
@@ -458,8 +467,8 @@ public class ClientThread {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public void generateRoomChangeMsg(String former,
-			String current, String identity, OutputStreamWriter _out) {
+	public void generateRoomChangeMsg(String former, String current,
+			String identity, OutputStreamWriter _out) {
 		JSONObject obj = new JSONObject();
 		obj.put("type", "roomchange");
 		obj.put("identity", identity);
@@ -479,8 +488,7 @@ public class ClientThread {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public void generateRoomContentMsg(ChatRoom room,
-			OutputStreamWriter out) {
+	public void generateRoomContentMsg(ChatRoom room, OutputStreamWriter out) {
 		if (room == null) {
 			return;
 		}
@@ -514,8 +522,7 @@ public class ClientThread {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	public void generateRoomListMsg()
-			throws IOException {
+	public void generateRoomListMsg() throws IOException {
 		JSONObject obj = new JSONObject();
 		JSONArray roomlist = new JSONArray();
 		obj.put("type", "roomlist");
@@ -546,8 +553,7 @@ public class ClientThread {
 		for (ClientThread client : room.getClients()) {
 			System.out.println(room.getClients().size());
 			OutputStreamWriter broadOut = client.getOutputStream();
-			client.generateRoomChangeMsg(former, current,
-					identity, broadOut);
+			client.generateRoomChangeMsg(former, current, identity, broadOut);
 		}
 	}
 
@@ -562,13 +568,14 @@ public class ClientThread {
 			String current) throws IOException {
 		for (ClientThread client : room.getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
-			client.generateRoomChangeMsg(former, current,
-					client.getClientInfo().getClientName(), broadOut);
+			client.generateRoomChangeMsg(former, current, client
+					.getClientInfo().getClientName(), broadOut);
 		}
 	}
 
 	/**
 	 * broadcast room content message
+	 * 
 	 * @param message
 	 * @throws IOException
 	 */
@@ -589,13 +596,13 @@ public class ClientThread {
 
 	/**
 	 * Generate a new Identity for a user
+	 * 
 	 * @param former
 	 * @param identity
 	 * @return A JSON value contains former and current identity info
 	 */
 	@SuppressWarnings("unchecked")
-	private String generateNewIdentity(String former,
-			String identity) {
+	private String generateNewIdentity(String former, String identity) {
 		JSONObject obj = new JSONObject();
 		obj.put("type", "newidentity");
 		obj.put("former", former);
@@ -604,7 +611,8 @@ public class ClientThread {
 	}
 
 	/**
-	 * Delete a specific room 
+	 * Delete a specific room
+	 * 
 	 * @param roomId
 	 * @throws IOException
 	 */
@@ -640,6 +648,7 @@ public class ClientThread {
 
 	/**
 	 * Remove room from mainhall if the room has no owner and no other users
+	 * 
 	 * @param currentRoom
 	 * @throws IOException
 	 */
@@ -655,13 +664,14 @@ public class ClientThread {
 
 	/**
 	 * Kick Client from Room in specific time
+	 * 
 	 * @param roomId
 	 * @param clientId
 	 * @param time
 	 * @throws IOException
 	 */
-	public void kickClientFromRoom(String roomId,
-			String clientId, Integer time) throws IOException {
+	public void kickClientFromRoom(String roomId, String clientId, Integer time)
+			throws IOException {
 		ChatRoom room = this.mainHall.getRoomById(roomId);
 		ClientThread client = room.findClient(clientId);
 		ArrayList<ChatRoom> rooms = clientInfo.getOwnerRooms();
@@ -682,6 +692,7 @@ public class ClientThread {
 
 	/**
 	 * Calculate the certain future expired time
+	 * 
 	 * @param kickedTime
 	 * @return
 	 */
@@ -693,6 +704,7 @@ public class ClientThread {
 
 	/**
 	 * Send a system message to clients
+	 * 
 	 * @param msg
 	 * @throws IOException
 	 */
@@ -706,10 +718,9 @@ public class ClientThread {
 	}
 
 	/**
-	 * The following information should be deleted in order: 
-	 * 1. remove the client from current room 
-	 * 2. If the own room has no content, delete the room 
-	 * 3. clear the ownership of the client
+	 * The following information should be deleted in order: 1. remove the
+	 * client from current room 2. If the own room has no content, delete the
+	 * room 3. clear the ownership of the client
 	 * 
 	 * @throws IOException
 	 */
@@ -717,7 +728,7 @@ public class ClientThread {
 	public void quit() throws IOException {
 		clientInfo.getCurrentRoom().removeClient(this);
 		// clear client info if not authenticated
-		if(!this.checkAuthenticated(clientInfo.getClientName())) {
+		if (!this.checkAuthenticated(clientInfo.getClientName())) {
 			this.clearClientInfo();
 		}
 		// save client info if it is
@@ -725,7 +736,7 @@ public class ClientThread {
 			// save client info
 			this.saveClientInfo();
 		}
-		
+
 		// inform all users
 		JSONObject obj = new JSONObject();
 		obj.put("type", "quit");
@@ -733,9 +744,10 @@ public class ClientThread {
 		broadMsgToAll(obj.toJSONString());
 		outFlush(outputStream, obj.toJSONString(), sCipher);
 	}
-	
+
 	/**
 	 * clear client's information if the client is not authenticated
+	 * 
 	 * @throws IOException
 	 */
 	private void clearClientInfo() throws IOException {
@@ -748,16 +760,16 @@ public class ClientThread {
 			room.setOwnerId("");
 		}
 		// add clientId to reused id
-		clientInfo.getFormerId().add(clientInfo.getClientName());
+		clientInfo.addFormerId(clientInfo.getClientName());
 	}
-	
+
 	/**
 	 * store client's info
 	 */
 	private void saveClientInfo() {
 		clientInfoHash.put(clientInfo.getClientName(), clientInfo);
 	}
-	
+
 	private void restoreClientInfo(String identity) {
 		ClientInfo oldClientInfo = clientInfoHash.get(identity);
 		clientInfo.restoreClientInfo(oldClientInfo);
@@ -780,13 +792,13 @@ public class ClientThread {
 		}
 	}
 
-	private synchronized void outFlush(OutputStreamWriter _out, String str, StreamCipher tCipher)
-			throws IOException {
-//^^^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	private synchronized void outFlush(OutputStreamWriter _out, String str,
+			StreamCipher tCipher) throws IOException {
+		// ^^^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
 		String result = tCipher.encrypt(str);
 		System.out.println(result);
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		_out.write(result + "\n");
 		_out.flush();
 	}
@@ -798,7 +810,7 @@ public class ClientThread {
 	private void setOutputStream(OutputStreamWriter outputStream) {
 		this.outputStream = outputStream;
 	}
-	
+
 	private StreamCipher getStreamCipher() {
 		return sCipher;
 	}

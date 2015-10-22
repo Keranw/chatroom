@@ -29,9 +29,8 @@ import unimelb.comp90015.project1.cypt.StreamCipher;
 import unimelb.comp90015.project1.server.ChatRoom;
 
 /**
- * @author kliu2
- * the main entrance for client, always to receive input from
- * server and print formated json string on standard output 
+ * @author kliu2 the main entrance for client, always to receive input from
+ *         server and print formated json string on standard output
  */
 public class ChatClient {
 	private static boolean isQuit;
@@ -59,24 +58,26 @@ public class ChatClient {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-			
+
 			String rootDir = System.getProperty("user.dir");
-			System.setProperty("javax.net.ssl.trustStore", rootDir + "/mySrvKeystore");
-			System.setProperty("javax.net.ssl.trustStorePassword","123456");
-			
+			System.setProperty("javax.net.ssl.trustStore", rootDir
+					+ "/mySrvKeystore");
+			System.setProperty("javax.net.ssl.trustStorePassword", "123456");
+
 			// Create SSL socket factory, which creates SSLSocket instances
-			SocketFactory factory= SSLSocketFactory.getDefault();
-			
+			SocketFactory factory = SSLSocketFactory.getDefault();
+
 			// connect to a server listening on port 4444 on localhost
 			socket = factory.createSocket(cmdOptions.hostname, cmdOptions.port);
-			
+
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), StandardCharsets.UTF_8));
-////////////DH exchange////////////////////
-			out = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
+			// //////////DH exchange////////////////////
+			out = new OutputStreamWriter(socket.getOutputStream(),
+					StandardCharsets.UTF_8);
 			String ans = in.readLine();
 			JSONParser parsor = new JSONParser();
-			JSONObject result = (JSONObject)parsor.parse(ans);
+			JSONObject result = (JSONObject) parsor.parse(ans);
 			BigInteger base = new BigInteger(result.get("base").toString());
 			BigInteger modulo = new BigInteger(result.get("modulo").toString());
 			BigInteger sTemp = new BigInteger(result.get("temp").toString());
@@ -88,7 +89,7 @@ public class ChatClient {
 			feedback.put("cTemp", cTemp.toString());
 			out.write(feedback.toJSONString() + "\n");
 			out.flush();
-/////////////////////////////////////////////////
+			// ///////////////////////////////////////////////
 			// Reading from console
 			Scanner cmdin = new Scanner(System.in);
 			BigInteger a = new BigInteger("73");
@@ -98,9 +99,9 @@ public class ChatClient {
 				// forcing TCP to receive data immediately
 				// TODO EOFException when server shuts down
 				String response = in.readLine();
-//#########################Decrypt################################
+				// #########################Decrypt################################
 				response = cCipher.decrypt(response);
-//################################################################
+				// ################################################################
 				if (response != null) {
 					try {
 						decodeResponse(socket, cmdin, response);
@@ -122,19 +123,20 @@ public class ChatClient {
 			e1.printStackTrace();
 		}
 	}
-	
-	///////////////////////////
-	///     				 //
-	/// 	DH exchange		 //
-	///						 //	
-	///////////////////////////
-	private static BigInteger generateRandom(int size){
+
+	// /////////////////////////
+	// / //
+	// / DH exchange //
+	// / //
+	// /////////////////////////
+	private static BigInteger generateRandom(int size) {
 		Random rnd = new Random();
 		BigInteger result = new BigInteger(size, rnd);
 		return result;
 	}
-	
-	private static BigInteger modExp(BigInteger base, BigInteger exp, BigInteger modulo) {
+
+	private static BigInteger modExp(BigInteger base, BigInteger exp,
+			BigInteger modulo) {
 		BigInteger two = new BigInteger("2");
 		if (exp.equals(BigInteger.ZERO)) {
 			return BigInteger.ONE;
@@ -193,10 +195,10 @@ public class ChatClient {
 				} else {
 					String newId = object.get("identity").toString();
 					String oldId = object.get("former").toString();
-					
+
 					// update the authenticated client salt property
 					client.updateSaltInDisk(newId, oldId);
-					
+
 					if (client.getClientName().equals(oldId)) {
 						client.setClientName(newId);
 					}
@@ -270,7 +272,7 @@ public class ChatClient {
 	 *         Command options -h hostname -p port number
 	 */
 	public static class CmdOptions {
-		@Argument(index=0, usage = "Give hostname", required = true)
+		@Argument(index = 0, usage = "Give hostname", required = true)
 		private String hostname;
 		@Option(name = "-p", usage = "Give port num", required = false)
 		private int port = 4444;

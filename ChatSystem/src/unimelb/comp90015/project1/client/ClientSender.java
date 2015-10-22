@@ -34,9 +34,8 @@ import unimelb.comp90015.project1.cypt.Crypto;
 import unimelb.comp90015.project1.cypt.StreamCipher;
 
 /**
- * @author kliu2
- * A Sender Thread to send command to server should parse the command
- * from command line to JSON Strings
+ * @author kliu2 A Sender Thread to send command to server should parse the
+ *         command from command line to JSON Strings
  *
  */
 public class ClientSender implements Runnable {
@@ -48,11 +47,13 @@ public class ClientSender implements Runnable {
 
 	/**
 	 * Constructor
+	 * 
 	 * @param socket
 	 * @param cmdin
 	 * @param client
 	 */
-	public ClientSender(Socket socket, Scanner cmdin, Client client, StreamCipher ccipher) {
+	public ClientSender(Socket socket, Scanner cmdin, Client client,
+			StreamCipher ccipher) {
 		this.socket = socket;
 		this.client = client;
 		this.cmdin = cmdin;
@@ -81,15 +82,17 @@ public class ClientSender implements Runnable {
 
 	/**
 	 * Using regular expression to extract command and arguments
+	 * 
 	 * @param command
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	private void parseCommand(String command, StreamCipher temp) throws IOException {
+	private void parseCommand(String command, StreamCipher temp)
+			throws IOException {
 		String type = null;
-		if(command.matches("^#[\\w\\W]+")) {
+		if (command.matches("^#[\\w\\W]+")) {
 			String[] params = command.trim().split("\\s+");
-			
+
 			type = params[0].split("#")[1];
 			constructJSON(type, params, temp);
 		} else {
@@ -97,45 +100,47 @@ public class ClientSender implements Runnable {
 			String[] param = new String[1];
 			param[0] = command;
 			constructJSON(type, param, temp);
-			
+
 		}
 	}
-	
+
 	/**
-	 * Using PBKDF2WithHmacSHA1 to generate a hash of password
-	 * to authenticate the identity in server
+	 * Using PBKDF2WithHmacSHA1 to generate a hash of password to authenticate
+	 * the identity in server
+	 * 
 	 * @param password
 	 * @return a hash of password
 	 */
-	private String generatedSecuredPasswordHash(String identity, String passwordToHash) {
+	private String generatedSecuredPasswordHash(String identity,
+			String passwordToHash) {
 		String passwordHash = null;
 		try {
-			passwordHash = Crypto.generateStorngPasswordHash(passwordToHash, getSalt(identity));
+			passwordHash = Crypto.generateStorngPasswordHash(passwordToHash,
+					getSalt(identity));
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-        System.out.println(passwordHash);
 		return passwordHash;
 	}
-	
-	private String getSalt(String identity) throws NoSuchAlgorithmException
-    {
+
+	private String getSalt(String identity) throws NoSuchAlgorithmException {
 		// TODO get salt from disk if not generate a new one
 		String saltStr = this.client.getSaltFromDisk(identity);
-		if(saltStr == null) {
+		if (saltStr == null) {
 			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 			byte[] salt = new byte[16];
 			sr.nextBytes(salt);
 			saltStr = salt.toString();
-	        // TODO store the salt in disk for specific client
+			// TODO store the salt in disk for specific client
 			this.client.storeSaltinDisk(identity, saltStr);
 		}
-        return saltStr;
-    }
+		return saltStr;
+	}
 
 	/**
 	 * construct json string
+	 * 
 	 * @param type
 	 * @param args
 	 * @throws IOException
@@ -154,8 +159,8 @@ public class ClientSender implements Runnable {
 			String identity = args[1];
 			String password = args[2];
 			requestObj.put("identity", identity);
-			requestObj.put("passwordHash", generatedSecuredPasswordHash(identity, password));
-			
+			requestObj.put("passwordHash",
+					generatedSecuredPasswordHash(identity, password));
 			break;
 		case "login":
 			// send password hash to server and server would verify the string
@@ -163,7 +168,8 @@ public class ClientSender implements Runnable {
 			String _identity = args[1];
 			String _password = args[2];
 			requestObj.put("identity", args[1]);
-			requestObj.put("passwordHash", generatedSecuredPasswordHash(_identity, _password));
+			requestObj.put("passwordHash",
+					generatedSecuredPasswordHash(_identity, _password));
 			break;
 		case "identitychange":
 			requestObj.put("identity", args[1]);
@@ -190,11 +196,11 @@ public class ClientSender implements Runnable {
 		case "quit":
 			break;
 		}
-		
-//^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		// ^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		String result = temp.encrypt(requestObj.toJSONString());
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		// send jsonstring to server 
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// send jsonstring to server
 		out.write((result + "\n"));
 		out.flush();
 	}

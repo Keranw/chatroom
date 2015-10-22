@@ -132,9 +132,10 @@ public class ChatServer {
 	private static void checkUnusedIds() {
 		ArrayList<String> formerNames = new ArrayList<String>();
 		for (ClientThread thread : threadsList) {
-			ArrayList<String> array = thread.getClientInfo().getFormerId();
+			ArrayList<String> array = thread.getClientInfo().getFormerIds();
 			if (array.size() > 0) {
 				formerNames.addAll(array);
+				thread.getClientInfo().clearFormerIds();
 			}
 		}
 		HashMap<String, Integer> unUsedHash = new HashMap<String, Integer>();
