@@ -2,10 +2,8 @@ package unimelb.comp90015.project1.cypt;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.util.Base64;
 
-import javax.print.attribute.ResolutionSyntax;
-import javax.swing.plaf.multi.MultiScrollBarUI;
+import org.apache.commons.codec.binary.Base64;
 
 
 public class StreamCipher {
@@ -91,7 +89,8 @@ public class StreamCipher {
 		String result = null;
 		try {
 			byte[] asArray = msg.getBytes("UTF-8");
-			result = Base64.getEncoder().encodeToString(_crypt(asArray));
+//			result = Base64.getEncoder().encodeToString(_crypt(asArray));
+			result = Base64.encodeBase64String(_crypt(asArray));
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
@@ -107,7 +106,8 @@ public class StreamCipher {
 	public String decrypt(String msg) {
 		String result = null;
 		try {
-			byte[] asArray = Base64.getDecoder().decode(msg.getBytes("UTF-8"));
+//			byte[] asArray = Base64.getDecoder().decode(msg.getBytes("UTF-8"));
+			byte[] asArray = Base64.decodeBase64(msg.getBytes("UTF-8"));
 			result = new String(_crypt(asArray), "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
