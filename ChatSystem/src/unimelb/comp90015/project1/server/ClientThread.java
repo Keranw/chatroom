@@ -97,7 +97,6 @@ public class ClientThread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 //		this.identitiesHash = identitiesHash;
 		this.clientInfoHash = clientInfoHash;
 		
@@ -180,7 +179,7 @@ public class ClientThread {
 			String outMsg = null;
 			System.out.println("first run");
 			outMsg = this.generateNewIdentity("", clientInfo.getClientName());
-			outFlush(outputStream, outMsg);
+			outFlush(outputStream, outMsg, sCipher);
 			// server join client to mainhall
 			joinRoom("mainhall");
 			fetchRoomInfo("mainhall");
@@ -291,7 +290,7 @@ public class ClientThread {
 		// broad change information to all clients online
 		for (ClientThread clientThread : this.mainHall.getAllClients()) {
 			OutputStreamWriter clientOut = clientThread.getOutputStream();
-			outFlush(clientOut, obj.toJSONString());
+			outFlush(clientOut, obj.toJSONString(), clientThread.getStreamCipher());
 		}
 	}
 
@@ -460,7 +459,7 @@ public class ClientThread {
 		obj.put("roomid", current);
 
 		try {
-			outFlush(_out, obj.toJSONString());
+			outFlush(_out, obj.toJSONString(), sCipher);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -493,7 +492,7 @@ public class ClientThread {
 		obj.put("identities", clients);
 		obj.put("owner", room.getOwnerId());
 		try {
-			outFlush(out, obj.toJSONString());
+			outFlush(out, obj.toJSONString(), sCipher);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -524,7 +523,7 @@ public class ClientThread {
 			roomlist.add(roomO);
 		}
 		obj.put("rooms", roomlist);
-		outFlush(outputStream, obj.toJSONString());
+		outFlush(outputStream, obj.toJSONString(), sCipher);
 	}
 
 	/**
@@ -576,7 +575,7 @@ public class ClientThread {
 		obj.put("identity", clientInfo.getClientName());
 		for (ClientThread client : clientInfo.getCurrentRoom().getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
-			outFlush(broadOut, obj.toJSONString());
+			outFlush(broadOut, obj.toJSONString(), client.getStreamCipher());
 		}
 	}
 
@@ -695,7 +694,7 @@ public class ClientThread {
 		obj.put("type", "message");
 		obj.put("identity", "SYSTEM");
 		obj.put("content", msg);
-		outFlush(outputStream, obj.toJSONString());
+		outFlush(outputStream, obj.toJSONString(), sCipher);
 	}
 
 	/**
@@ -724,7 +723,7 @@ public class ClientThread {
 		obj.put("type", "quit");
 		obj.put("identity", clientInfo.getClientName());
 		broadMsgToAll(obj.toJSONString());
-		outFlush(outputStream, obj.toJSONString());
+		outFlush(outputStream, obj.toJSONString(), sCipher);
 	}
 	
 	/**
@@ -768,15 +767,16 @@ public class ClientThread {
 		System.err.println(jsonStr);
 		for (ClientThread client : clientInfo.getCurrentRoom().getClients()) {
 			OutputStreamWriter broadOut = client.getOutputStream();
-			outFlush(broadOut, jsonStr);
+			StreamCipher baCipher = client.getStreamCipher();
+			outFlush(broadOut, jsonStr, baCipher);
 		}
 	}
 
-	private synchronized void outFlush(OutputStreamWriter _out, String str)
+	private synchronized void outFlush(OutputStreamWriter _out, String str, StreamCipher tCipher)
 			throws IOException {
 //^^^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-		String result = sCipher.encrypt(str);
+		String result = tCipher.encrypt(str);
 		System.out.println(result);
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		_out.write(result + "\n");
@@ -790,5 +790,8 @@ public class ClientThread {
 	private void setOutputStream(OutputStreamWriter outputStream) {
 		this.outputStream = outputStream;
 	}
-
+	
+	private StreamCipher getStreamCipher() {
+		return sCipher;
+	}
 }
