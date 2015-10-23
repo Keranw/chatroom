@@ -69,8 +69,9 @@ public class ChatClient implements Runnable {
 				// TODO Auto-generated catch block
 //				e1.printStackTrace();
 			}
-
-			SSLContext sc = Util.getSSLClientContext();
+			
+			Util util = new Util();
+			SSLContext sc = util.getSSLClientContext();
 			
 			// Create SSL socket factory, which creates SSLSocket instances
 			SSLSocketFactory factory = (SSLSocketFactory) sc.getSocketFactory();

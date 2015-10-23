@@ -55,10 +55,8 @@ public class ChatServer {
 				e1.printStackTrace();
 			}
 			
-//			System.setProperty("javax.net.ssl.keyStore", rootDir + "/mySrvKeystore");
-//			System.setProperty("javax.net.ssl.keyStorePassword","123456");
-			
-			SSLContext sc = Util.getSSLServerContext();
+			Util util = new Util();
+			SSLContext sc = util.getSSLServerContext();
 			// Create SSL server socket factory, which creates SSLServerSocket instances
 			ServerSocketFactory factory = sc.getServerSocketFactory();
 			
