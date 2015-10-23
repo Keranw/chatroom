@@ -4,9 +4,22 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.*;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 
 import org.json.simple.parser.ParseException;
@@ -14,7 +27,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import unimelb.comp90015.project1.server.ClientThread;
+import unimelb.comp90015.project1.keystore.*;
 
 /**
  * @author kliu2 Main Thread for Server
@@ -22,7 +35,6 @@ import unimelb.comp90015.project1.server.ClientThread;
 public class ChatServer {
 	private static MainHall mainHall;
 	private static HashMap<String, Integer> allUsedIds;
-//	private static HashMap<String, String> identitiesHash;
 	private static HashMap<String, ClientInfo> clientInfoHash;
 	private static Queue<String> unUsedIds;
 	private static ArrayList<ClientThread> threadsList;
@@ -43,16 +55,17 @@ public class ChatServer {
 				e1.printStackTrace();
 			}
 			
-			String rootDir = System.getProperty("user.dir");
-			System.out.println(rootDir);
-			System.setProperty("javax.net.ssl.keyStore", rootDir + "/mySrvKeystore");
-			System.setProperty("javax.net.ssl.keyStorePassword","123456");
+//			System.setProperty("javax.net.ssl.keyStore", rootDir + "/mySrvKeystore");
+//			System.setProperty("javax.net.ssl.keyStorePassword","123456");
 			
+			SSLContext sc = Util.getSSLServerContext();
 			// Create SSL server socket factory, which creates SSLServerSocket instances
-			ServerSocketFactory factory = SSLServerSocketFactory.getDefault();
+			ServerSocketFactory factory = sc.getServerSocketFactory();
 			
 			// Server is listening on port 4444
-			try(ServerSocket serverSocket = factory.createServerSocket(serverOptions.port)) {
+			try(SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(serverOptions.port)) {
+				
+//				serverSocket.setEnabledCipherSuites(Util.enabledCipherSuites);
 				System.out.println("Server is listening...");
 
 				// To store the all used Id and reUsed Ids
@@ -79,6 +92,12 @@ public class ChatServer {
 			 e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (KeyManagementException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (NoSuchAlgorithmException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		} finally {
 			// if (serverSocket != null) {
 			// serverSocket.close();

@@ -9,11 +9,15 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.Policy.Parameters;
 import java.util.Random;
 import java.util.Scanner;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.swing.plaf.synth.SynthSpinnerUI;
 
@@ -27,6 +31,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import unimelb.comp90015.project1.cypt.StreamCipher;
+import unimelb.comp90015.project1.keystore.Util;
 import unimelb.comp90015.project1.server.ChatRoom;
 
 /**
@@ -51,7 +56,7 @@ public class ChatClient implements Runnable {
 	}
 	
 	public void run() {
-		Socket socket = null;
+		SSLSocket socket = null;
 		isQuit = false;
 		isFirstTime = true;
 		try {
@@ -62,19 +67,17 @@ public class ChatClient implements Runnable {
 				parser.parseArgument(args);
 			} catch (CmdLineException e1) {
 				// TODO Auto-generated catch block
-				e1.printStackTrace();
+//				e1.printStackTrace();
 			}
 
-			String rootDir = System.getProperty("user.dir");
-			System.setProperty("javax.net.ssl.trustStore", rootDir
-					+ "/mySrvKeystore");
-			System.setProperty("javax.net.ssl.trustStorePassword", "123456");
-
+			SSLContext sc = Util.getSSLClientContext();
+			
 			// Create SSL socket factory, which creates SSLSocket instances
-			SocketFactory factory = SSLSocketFactory.getDefault();
+			SSLSocketFactory factory = (SSLSocketFactory) sc.getSocketFactory();
 
 			// connect to a server listening on port 4444 on localhost
-			socket = factory.createSocket(cmdOptions.hostname, cmdOptions.port);
+			socket = (SSLSocket) factory.createSocket(cmdOptions.hostname, cmdOptions.port);
+//			socket.setEnabledCipherSuites(Util.enabledCipherSuites);
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), StandardCharsets.UTF_8));
@@ -136,6 +139,12 @@ public class ChatClient implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (ParseException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (KeyManagementException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (NoSuchAlgorithmException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
