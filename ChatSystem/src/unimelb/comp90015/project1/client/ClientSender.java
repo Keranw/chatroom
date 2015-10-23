@@ -122,6 +122,7 @@ public class ClientSender implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 		return passwordHash;
 	}
 
