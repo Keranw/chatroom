@@ -104,6 +104,9 @@ public class StreamCipher {
 	 * @return plain text as a string
      */
 	public String decrypt(String msg) {
+		if (msg == null) {
+			return null;
+		}
 		String result = null;
 		try {
 //			byte[] asArray = Base64.getDecoder().decode(msg.getBytes("UTF-8"));
