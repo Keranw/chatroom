@@ -107,11 +107,6 @@ public class ClientThread {
 		handlerThread.start();
 	}
 
-	// stop this thread
-	public void interruptThread() {
-		handlerThread.interrupt();
-	}
-
 	// /////////////////////////
 	// / //
 	// / DH exchange //
@@ -120,6 +115,7 @@ public class ClientThread {
 	private BigInteger generateRandom(int size) {
 		Random rnd = new Random();
 		BigInteger result = new BigInteger(size, rnd);
+		result = result.add(BigInteger.ONE);
 		return result;
 	}
 

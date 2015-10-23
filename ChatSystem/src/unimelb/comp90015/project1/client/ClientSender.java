@@ -43,6 +43,7 @@ public class ClientSender implements Runnable {
 	private Client client;
 	private Scanner cmdin;
 	private static OutputStreamWriter out;
+	public static boolean flag = true;
 	public StreamCipher cCipher;
 
 	/**
@@ -66,7 +67,7 @@ public class ClientSender implements Runnable {
 			// Preparing sending streams
 			out = new OutputStreamWriter(socket.getOutputStream(),
 					StandardCharsets.UTF_8);
-			while (!socket.isClosed()) {
+			while (flag) {
 				String msg = cmdin.nextLine();
 				// forcing TCP to send data immediately
 
@@ -194,7 +195,12 @@ public class ClientSender implements Runnable {
 			requestObj.put("roomid", args[1]);
 			break;
 		case "quit":
+			flag = false;
 			break;
+		default:
+			requestObj.put("content", args[0]);
+			requestObj.put("type", "message");
+			break;	
 		}
 
 		// ^^^^^^^^^^^^^^^^^^^^encrypt^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

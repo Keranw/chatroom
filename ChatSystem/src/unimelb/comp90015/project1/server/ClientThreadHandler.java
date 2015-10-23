@@ -83,7 +83,6 @@ public class ClientThreadHandler implements Runnable {
 						break;
 					}
 				}
-				interruptThread();
 			} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -116,7 +115,6 @@ public class ClientThreadHandler implements Runnable {
 			e.printStackTrace();
 		}
 		System.out.println("thread is interrupted");
-		this._client.interruptThread();
 	}
 
 	/**

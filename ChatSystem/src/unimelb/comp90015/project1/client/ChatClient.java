@@ -15,6 +15,7 @@ import java.util.Scanner;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
+import javax.swing.plaf.synth.SynthSpinnerUI;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -32,7 +33,7 @@ import unimelb.comp90015.project1.server.ChatRoom;
  * @author kliu2 the main entrance for client, always to receive input from
  *         server and print formated json string on standard output
  */
-public class ChatClient {
+public class ChatClient implements Runnable {
 	private static boolean isQuit;
 	private static boolean isFirstTime;
 	private static Client client;
@@ -43,8 +44,13 @@ public class ChatClient {
 	private static CmdOptions cmdOptions;
 	private static OutputStreamWriter out;
 	public static StreamCipher cCipher;
+	public String[] args;
 
-	public static void main(String[] args) throws IOException {
+	public ChatClient(String[] temp){
+		args = temp;
+	}
+	
+	public void run() {
 		Socket socket = null;
 		isQuit = false;
 		isFirstTime = true;
@@ -84,7 +90,7 @@ public class ChatClient {
 			BigInteger privateKey = generateRandom(2048);
 			BigInteger cTemp = modExp(base, privateKey, modulo);
 			BigInteger sharedKey = modExp(sTemp, privateKey, modulo);
-			System.out.println(sharedKey);
+			//System.out.println(sharedKey);
 			JSONObject feedback = new JSONObject();
 			feedback.put("cTemp", cTemp.toString());
 			out.write(feedback.toJSONString() + "\n");
@@ -110,10 +116,21 @@ public class ChatClient {
 					}
 				}
 			}
-			System.exit(0);
+			//************************break the threads**********************
+			sender.constructJSON("quit", null, cCipher);
+			cmdin.close();
+			in.close();
+			out.close();
+			socket.close();
+			//***************************************************************
 		} catch (EOFException e) {
 			// sent a quit command to server if exception occurs
-			sender.constructJSON("quit", null, cCipher);
+			try {
+				sender.constructJSON("quit", null, cCipher);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -247,14 +264,11 @@ public class ChatClient {
 				break;
 			case "quit":
 				String ID = object.get("identity").toString();
-				System.err.println(ID + " has quited");
 				if (client.getClientName().equals(ID)) {
 					isQuit = true;
-
-					cmdin.close();
-					socket.close();
-					// thread interrupt
-					senderThread.interrupt();
+				}
+				else {
+					System.out.println(ID + " has quited!");
 				}
 				break;
 			}
